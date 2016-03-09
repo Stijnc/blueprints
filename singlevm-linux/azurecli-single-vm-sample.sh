@@ -19,17 +19,20 @@ PASSWORD="AweS0me@PW"
 # is active/default
 SUBSCRIPTION=$1
 
-RESOURCE_GROUP=$APP_NAME-$ENVIRONMENT-rg
+
+
 VM_NAME=$APP_NAME-vm0
 #echo $VM_NAME
 
-IP_NAME=$APP_NAME-pip
-NIC_NAME=$VM_NAME-0nic
-NSG_NAME=$APP_NAME-nsg
-SUBNET_NAME=$APP_NAME-subnet
-VNET_NAME=$APP_NAME-vnet
-VHD_STORAGE="${VM_NAME//-}""st0"
-DIAGNOSTICS_STORAGE="${VM_NAME//-}""diag"
+RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
+VM_NAME="${APP_NAME}-vm0"
+IP_NAME="${APP_NAME}-pip"
+NIC_NAME="${VM_NAME}-0nic"
+NSG_NAME="${APP_NAME}-nsg"
+SUBNET_NAME="${APP_NAME}-subnet"
+VNET_NAME="${APP_NAME}-vnet"
+VHD_STORAGE="${VM_NAME//-}st0"
+DIAGNOSTICS_STORAGE="${VM_NAME//-}diag"
 
 # For UBUNTU,OPENSUSE,RHEL use the following command to get the list of URNs:
 # UBUNTU
@@ -46,7 +49,7 @@ VM_SIZE=Standard_DS1
 
 # Set up the postfix variables attached to most CLI commands
 
-POSTFIX="--resource-group "$RESOURCE_GROUP" --location "$LOCATION" --subscription "$SUBSCRIPTION
+POSTFIX="--resource-group ${RESOURCE_GROUP} --location ${LOCATION} --subscription ${SUBSCRIPTION}"
 
 azure config mode arm
 
@@ -78,7 +81,7 @@ azure storage account create --type PLRS $POSTFIX $VHD_STORAGE
 azure storage account create --type LRS $POSTFIX $DIAGNOSTICS_STORAGE
 
 #Create the VM
-azure vm create --name $VM_NAME --os-type Linux --image-urn  $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --vnet-name $VNET_NAME --nic-name $NIC_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd $VM_NAME"-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://"$DIAGNOSTICS_STORAGE".blob.core.windows.net/" $POSTFIX
+azure vm create --name $VM_NAME --os-type Linux --image-urn  $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --vnet-name $VNET_NAME --nic-name $NIC_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" $POSTFIX
 
  
 #Attach a data disk
