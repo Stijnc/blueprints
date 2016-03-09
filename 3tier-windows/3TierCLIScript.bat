@@ -10,7 +10,7 @@ IF "%~1"=="" (
 :: the cluster
 
 SET LOCATION=centralus
-SET APP_NAME=app2
+SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
 SET PASSWORD=AweS0me@PW
@@ -62,10 +62,10 @@ CALL azure network public-ip create --name %PUBLIC_IP_NAME% --location %LOCATION
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers
 
-CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% 10.0.0.0/24
-CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24
-CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24
-CALL :CreateTier manage 1 10.0.3.0/24
+CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% 10.0.0.0/24 true
+CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24 true
+CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24 false
+CALL :CreateTier manage 1 10.0.3.0/24 false
 
 GOTO :eof
 
@@ -80,6 +80,7 @@ ECHO Creating %1 tier
 SET TIER_NAME=%1
 SET NUM_VM_INSTANCES=%2
 SET ADDRESS_PREFIX=%3
+SET LB_NEEDED=%4
 SET SUBNET_NAME=%APP_NAME%-%TIER_NAME%tier-subnet
 SET AVAILSET_TIER_NAME=%APP_NAME%-%TIER_NAME%tier-as
 SET LB_NAME=%APP_NAME%-%TIER_NAME%tier-lb
@@ -91,7 +92,7 @@ SET LB_PROBE_NAME=%LB_NAME%-probe
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   %ADDRESS_PREFIX% --name %SUBNET_NAME% %POSTFIX%
 
-IF %TIER_NAME% NEQ db ( 
+IF %LB_NEEDED%==true ( 
 	:: Create the load balancer
 	CALL azure network lb create --name %LB_NAME% --location %LOCATION% %POSTFIX%
 
