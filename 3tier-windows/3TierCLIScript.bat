@@ -89,13 +89,13 @@ CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% 10.0.3.0/24 false
 
 SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 
-azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
-azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
+CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
+CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
 	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
-azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
+CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
 	--network-security-group-name %MANAGE_NSG_NAME% %POSTFIX%
 
 :: Make Jump Box publically accessible
@@ -106,13 +106,13 @@ CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_
 
 SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 
-azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
-azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
+CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
 	--source-address-prefix 10.0.1.0/24 --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
-azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
+CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
 	--network-security-group-name %DB_TIER_NSG_NAME% %POSTFIX%
 
 GOTO :eof
