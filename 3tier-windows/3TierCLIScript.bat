@@ -2,12 +2,12 @@
 SETLOCAL
 
 IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id admin-box-ip
+    ECHO Usage: %0 subscription-id admin-address-prefix
     EXIT /B
     )
 
 IF "%~2"=="" (
-    ECHO Usage: %0 subscription-id admin-box-ip
+    ECHO Usage: %0 subscription-id admin-address-prefix
     EXIT /B
     )
 
@@ -31,7 +31,7 @@ SET REMOTE_ACCESS_PORT=3389
 :: is active/default
 SET SUBSCRIPTION=%1
 
-SET ADMIN_BOX_IP=%2
+SET ADMIN_ADDRESS_PREFIX=%2
 
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
@@ -92,7 +92,7 @@ SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
+	--source-address-prefix %ADMIN_ADDRESS_PREFIX% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
