@@ -39,8 +39,7 @@ SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4
 SET VM_SIZE=Standard_DS1
 
 :: Set up the postfix variables attached to most CLI commands
-SET POSTFIX=--resource-group %RESOURCE_GROUP% --location %LOCATION% ^
-  --subscription %SUBSCRIPTION%
+SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
 
 CALL azure config mode arm
 
@@ -48,32 +47,36 @@ CALL azure config mode arm
 :: Create resources
 
 :: Create the enclosing resource group
-CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION%
+CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% ^
+  --subscription %SUBSCRIPTION% 
 
 :: Create the VNet
 CALL azure network vnet create --address-prefixes 172.17.0.0/16 ^
-  --name %VNET_NAME% %POSTFIX%
+  --name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the network security group
-CALL azure network nsg create --name %NSG_NAME% %POSTFIX%
-
+CALL azure network nsg create --name %NSG_NAME% --location %LOCATION% %POSTFIX% 
+  
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   172.17.0.0/24 --name %SUBNET_NAME% --network-security-group-name %NSG_NAME% ^
-  --resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
+  %POSTFIX%
 
 :: Create the public IP address (dynamic)
-CALL azure network public-ip create --name %IP_NAME% %POSTFIX%
+CALL azure network public-ip create --name %IP_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the NIC
 CALL azure network nic create --public-ip-name %IP_NAME% --subnet-name ^
-  %SUBNET_NAME% --subnet-vnet-name %VNET_NAME%  --name %NIC_NAME% %POSTFIX%
+  %SUBNET_NAME% --subnet-vnet-name %VNET_NAME%  --name %NIC_NAME% --location ^
+  %LOCATION% %POSTFIX%
 
 :: Create the storage account for the OS VHD
-CALL azure storage account create --type PLRS %POSTFIX% %VHD_STORAGE%
+CALL azure storage account create --type PLRS --location %LOCATION% %POSTFIX% ^
+  %VHD_STORAGE%
 
 :: Create the storage account for diagnostics logs
-CALL azure storage account create --type LRS %POSTFIX% %DIAGNOSTICS_STORAGE%
+CALL azure storage account create --type LRS --location %LOCATION% %POSTFIX% ^
+  %DIAGNOSTICS_STORAGE%
 
 :: Create the VM
 CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
@@ -81,13 +84,14 @@ CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
   --vnet-name %VNET_NAME% --nic-name %NIC_NAME% --storage-account-name ^
   %VHD_STORAGE% --os-disk-vhd "%VM_NAME%-osdisk.vhd" --admin-username ^
   "%USERNAME%" --admin-password "%PASSWORD%" --boot-diagnostics-storage-uri ^
-  "https://%DIAGNOSTICS_STORAGE%.blob.core.windows.net/" %POSTFIX%
+  "https://%DIAGNOSTICS_STORAGE%.blob.core.windows.net/" --location %LOCATION% ^
+  %POSTFIX%
 
 :: Attach a data disk
-CALL azure vm disk attach-new -g %RESOURCE_GROUP% --vm-name %VM_NAME% ^
-  --size-in-gb 128 --vhd-name data1.vhd --storage-account-name %VHD_STORAGE%
+CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
+  data1.vhd --storage-account-name %VHD_STORAGE% %POSTFIX%
 
 :: Allow RDP
-CALL azure network nsg rule create -g %RESOURCE_GROUP% --nsg-name %NSG_NAME% ^
-  --direction Inbound --protocol Tcp --destination-port-range 3389 ^
-  --source-port-range * --priority 100 --access Allow RDPAllow
+CALL azure network nsg rule create --nsg-name %NSG_NAME% --direction Inbound ^
+  --protocol Tcp --destination-port-range 3389 --source-port-range * ^
+  --priority 100 --access Allow RDPAllow %POSTFIX%
