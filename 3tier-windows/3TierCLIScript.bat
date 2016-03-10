@@ -1,8 +1,13 @@
-ECHO OFF
+::ECHO OFF
 SETLOCAL
 
 IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id
+    ECHO Usage: %0 subscription-id admin-box-ip
+    EXIT /B
+    )
+
+IF "%~2"=="" (
+    ECHO Usage: %0 subscription-id admin-box-ip
     EXIT /B
     )
 
@@ -18,16 +23,23 @@ SET PASSWORD=AweS0me@PW
 SET NUM_VM_INSTANCES_WEB_TIER=3
 SET NUM_VM_INSTANCES_BIZ_TIER=3
 SET NUM_VM_INSTANCES_DB_TIER=2
+SET NUM_VM_INSTANCES_MANAGE_TIER=1
+
+SET REMOTE_ACCESS_PORT=3389
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
 :: is active/default
 SET SUBSCRIPTION=%1
 
+SET ADMIN_BOX_IP=%2
+
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
 SET VNET_NAME=%APP_NAME%-vnet
 SET PUBLIC_IP_NAME=%APP_NAME%-pip
+SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
+SET JUMP_BOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
 
 :: For Windows, use the following command to get the list of URNs:
 :: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
@@ -59,13 +71,49 @@ CALL azure storage account create --type LRS --location %LOCATION% %POSTFIX% ^
 :: Create the public IP address (dynamic)
 CALL azure network public-ip create --name %PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
 
+:: Create the management public IP address (dynamic)
+CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
+
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers
 
 CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% 10.0.0.0/24 true
 CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24 true
 CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24 false
-CALL :CreateTier manage 1 10.0.3.0/24 false
+CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% 10.0.3.0/24 false
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: NSG Rules
+
+:: Jump box NSG rule and public ip
+
+SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
+
+azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
+azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
+	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
+	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
+	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
+
+azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
+	--network-security-group-name %MANAGE_NSG_NAME% %POSTFIX%
+
+:: Make Jump Box publically accessible
+CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_PUBLIC_IP_NAME% %POSTFIX%
+
+
+:: DB Tier NSG rule
+
+SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
+
+azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
+azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
+	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
+	--source-address-prefix 10.0.1.0/24 --source-port-range * ^
+	--destination-address-prefix * --destination-port-range * %POSTFIX%
+
+azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
+	--network-security-group-name %DB_TIER_NSG_NAME% %POSTFIX%
 
 GOTO :eof
 
@@ -130,7 +178,7 @@ CALL azure availset create --name %AVAILSET_TIER_NAME% --location %LOCATION% %PO
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,NUM_VM_INSTANCES) DO CALL :CreateVM %%I %TIER_NAME% %SUBNET_NAME%
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES%) DO CALL :CreateVM %%I %TIER_NAME% %SUBNET_NAME% %LB_NEEDED% %LB_NAME%
 
 GOTO :eof
 
@@ -141,13 +189,16 @@ GOTO :eof
 
 ECHO Creating VM %1
 
-SET TIER_NAME=%3
+SET TIER_NAME=%2
+SET SUBNET_NAME=%3
+SET HAS_LB=%4
+SET LB_NAME=%5
+
 SET VM_NAME=%APP_NAME%-%TIER_NAME%-vm%1
 SET NIC_NAME=%VM_NAME%-0nic
 SET VHD_STORAGE=%VM_NAME:-=%st0
 SET /a RDP_PORT=50001 + %1
-SET SUBNET_NAME=%3
-SET LB_NAME=%4
+
 SET LB_FRONTEND_NAME=%LB_NAME%-frontend
 SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 
@@ -155,22 +206,12 @@ SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 CALL azure network nic create --name %NIC_NAME% --subnet-name %SUBNET_NAME% ^
   --subnet-vnet-name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
-IF %LB_NAME% NEQ ""(
+IF %HAS_LB%==true (
 	:: Add NIC to back-end address pool
 	CALL azure network nic address-pool add --name %NIC_NAME% --lb-name %LB_NAME% ^
 	  --lb-address-pool-name %LB_BACKEND_NAME% %POSTFIX%
-
-	IF %TIER_NAME%=="web" (
-		:: Create NAT rule for RDP
-		CALL azure network lb inbound-nat-rule create --name rdp-vm%1 --frontend-port ^
-		  %RDP_PORT% --backend-port 3389 --lb-name %LB_NAME% --frontend-ip-name ^
-		  %LB_FRONTEND_NAME% %POSTFIX%
-
-		:: Add NAT rule to the NIC
-		CALL azure network nic inbound-nat-rule add --name %NIC_NAME% --lb-name ^
-		  %LB_NAME% --lb-inbound-nat-rule-name rdp-vm%1 %POSTFIX%
-	)
 )
+
 :: Create the storage account for the OS VHD
 CALL azure storage account create --type PLRS --location %LOCATION% ^
  %VHD_STORAGE% %POSTFIX%
@@ -182,7 +223,7 @@ CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
   %VHD_STORAGE% --os-disk-vhd "%VM_NAME%-osdisk.vhd" --admin-username ^
   "%USERNAME%" --admin-password "%PASSWORD%" --boot-diagnostics-storage-uri ^
   "https://%DIAGNOSTICS_STORAGE%.blob.core.windows.net/" --availset-name ^
-  %AVAILSET_NAME% --location %LOCATION% %POSTFIX%
+  %AVAILSET_TIER_NAME% --location %LOCATION% %POSTFIX%
 
 :: Attach a data disk
 CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
