@@ -1,21 +1,18 @@
 ::ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id admin-address-prefix
-    EXIT /B
-    )
-
 IF "%~2"=="" (
     ECHO Usage: %0 subscription-id admin-address-prefix
+    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm
     EXIT /B
     )
 
 :: Set up variables to build out the naming conventions for deploying
 :: the cluster
 
+:: The APP_NAME variable must not exceed 4 characters in size. If it does the 15 character size limitation of the VM name may be exceeded.
+SET APP_NAME=app2
 SET LOCATION=centralus
-SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
 SET PASSWORD=AweS0me@PW
@@ -24,6 +21,13 @@ SET NUM_VM_INSTANCES_WEB_TIER=3
 SET NUM_VM_INSTANCES_BIZ_TIER=3
 SET NUM_VM_INSTANCES_DB_TIER=2
 SET NUM_VM_INSTANCES_MANAGE_TIER=1
+
+SET WEB_SUBNET_IP_RANGE=10.0.0.0/24
+SET BIZ_SUBNET_IP_RANGE=10.0.1.0/24
+SET DB_SUBNET_IP_RANGE=10.0.2.0/24
+SET MANAGE_SUBNET_IP_RANGE=10.0.3.0/24
+
+SET BIZ_ILB_IP=10.0.1.250
 
 SET REMOTE_ACCESS_PORT=3389
 
@@ -77,10 +81,10 @@ CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers
 
-CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% 10.0.0.0/24 true
-CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24 true
-CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24 false
-CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% 10.0.3.0/24 false
+CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% %WEB_SUBNET_IP_RANGE% true
+CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% %BIZ_SUBNET_IP_RANGE% true
+CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% %DB_SUBNET_IP_RANGE% false
+CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% %MANAGE_SUBNET_IP_RANGE% false
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: NSG Rules
@@ -92,7 +96,7 @@ SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix %ADMIN_ADDRESS_PREFIX% --source-port-range * ^
+	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
@@ -109,7 +113,7 @@ SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix 10.0.1.0/24 --source-port-range * ^
+	--source-address-prefix BIZ_SUBNET_IP_RANGE --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
@@ -155,7 +159,7 @@ IF %LB_NEEDED%==true (
 		ECHO Creating frontend-ip for biz tier using subnet %SUBNET_NAME%
 		:: Associate the frontend-ip with a private IP address
 		CALL azure network lb frontend-ip create --name %LB_FRONTEND_NAME% --lb-name ^
-		  %LB_NAME% --private-ip-address 10.0.1.5 --subnet-name %SUBNET_NAME% ^
+		  %LB_NAME% --private-ip-address %BIZ_ILB_IP% --subnet-name %SUBNET_NAME% ^
 		  --subnet-vnet-name %VNET_NAME% %POSTFIX%
 	)
 
