@@ -1,4 +1,4 @@
-::ECHO OFF
+ECHO OFF
 SETLOCAL
 
 IF "%~2"=="" (
@@ -113,7 +113,7 @@ CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_
 SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
-CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biztier-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
 	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
