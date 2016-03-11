@@ -7,11 +7,18 @@ IF "%~2"=="" (
     EXIT /B
     )
 
+:: Explicitly set the subscription to avoid confusion as to which subscription
+:: is active/default
+
+SET SUBSCRIPTION=%1
+
+SET ADMIN_ADDRESS_PREFIX=%2
+
 :: Set up variables to build out the naming conventions for deploying
 :: the cluster
 
 :: The APP_NAME variable must not exceed 4 characters in size. If it does the 15 character size limitation of the VM name may be exceeded.
-SET APP_NAME=app2
+SET APP_NAME=app0
 SET LOCATION=centralus
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
@@ -22,6 +29,7 @@ SET NUM_VM_INSTANCES_BIZ_TIER=3
 SET NUM_VM_INSTANCES_DB_TIER=2
 SET NUM_VM_INSTANCES_MANAGE_TIER=1
 
+SET VNET_IP_RANGE=10.0.0.0/16
 SET WEB_SUBNET_IP_RANGE=10.0.0.0/24
 SET BIZ_SUBNET_IP_RANGE=10.0.1.0/24
 SET DB_SUBNET_IP_RANGE=10.0.2.0/24
@@ -31,11 +39,12 @@ SET BIZ_ILB_IP=10.0.1.250
 
 SET REMOTE_ACCESS_PORT=3389
 
-:: Explicitly set the subscription to avoid confusion as to which subscription
-:: is active/default
-SET SUBSCRIPTION=%1
+:: For Windows, use the following command to get the list of URNs:
+:: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
+SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.0.20160126
 
-SET ADMIN_ADDRESS_PREFIX=%2
+:: For a list of VM sizes see: https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-size-specs/
+SET VM_SIZE=Standard_DS1
 
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
@@ -44,13 +53,6 @@ SET PUBLIC_IP_NAME=%APP_NAME%-pip
 SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
 SET JUMP_BOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
-
-:: For Windows, use the following command to get the list of URNs:
-:: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
-SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.0.20160126
-
-:: For a list of VM sizes see...
-SET VM_SIZE=Standard_DS1
 
 :: Set up the postfix variables attached to most CLI commands
 SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
@@ -65,7 +67,7 @@ CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% ^
   --subscription %SUBSCRIPTION%
 
 :: Create the VNet
-CALL azure network vnet create --address-prefixes 10.0.0.0/16 ^
+CALL azure network vnet create --address-prefixes %VNET_IP_RANGE% ^
   --name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the storage account for diagnostics logs
@@ -96,7 +98,7 @@ SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
+	--source-address-prefix %ADMIN_ADDRESS_PREFIX% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
@@ -113,7 +115,7 @@ SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix BIZ_SUBNET_IP_RANGE --source-port-range * ^
+	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
