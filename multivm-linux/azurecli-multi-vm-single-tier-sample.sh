@@ -4,34 +4,33 @@
 # define functions
 create_vm()
 {
+  
+ 
+  VM_NAME=$1
+  NIC_NAME=$2
+  VHD_STORAGE=$3
+  SSH_PORT=$4
+  NAT_RULE=$5
+  #Create NIC for VM1 
+  azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME --subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
 
-VM_NUM=$1
-VM_NAME=$2
-NIC_NAME=$3
-VHD_STORAGE=$4
+  #Add NIC to back-end address pool
+  azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
 
-SSH_PORT=22 + $1
+  #Create NAT rule for RDP
+  azure network lb inbound-nat-rule create --name $NAT_RULE --frontend-port $SSH_PORT --backend-port 22 --lb-name $LB_NAME --frontend-ip-name $LB_FRONTEND_NAME $POSTFIX
 
-#Create NIC for VM1
-azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME--subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
+  #Add NAT rule to the NIC
+  azure network nic inbound-nat-rule add --name $NIC_NAME --lb-name $LB_NAME --lb-inbound-nat-rule-name $NAT_RULE $POSTFIX
 
-#Add NIC to back-end address pool
-azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
+  #Create the storage account for the OS VHD
+  azure storage account create --type PLRS --location $LOCATION $VHD_STORAGE $POSTFIX
 
-#Create NAT rule for RDP
-azure network lb inbound-nat-rule create --name "ssh-vm${VM_NUM}" --frontend-port $RDP_PORT --backend-port 22 --lb-name $LB_NAME --frontend-ip-name $LB_FRONTEND_NAME $POSTFIX
+  #Create the VM                                                                                                                                                                                                                                                                                                                                                                                
+  azure vm create --name $VM_NAME --os-type Linux --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" --availset-name $AVAILSET_NAME --location $LOCATION $POSTFIX
 
-:: Add NAT rule to the NIC
-azure network nic inbound-nat-rule add --name $NIC_NAME --lb-name $LB_NAME --lb-inbound-nat-rule-name "ssh-vm${VM_NUM}" $POSTFIX
-
-#Create the storage account for the OS VHD
-azure storage account create --type PLRS --location $LOCATION $VHD_STORAGE $POSTFIX
-
-#Create the VM
-azure vm create --name $VM_NAME --os-type Linux --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" --availset-name $AVAILSET_NAME --location $LOCATION $POSTFIX
-
-#Attach a data disk
-azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 --vhd-name "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
+  #Attach a data disk
+  azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 --vhd-name "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
   
 }
 
@@ -53,7 +52,7 @@ NUM_VM_INSTANCES=2
 SUBSCRIPTION=$1
 
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
-VM_NAME="${APP_NAME}-vm0"
+
 
 AVAILSET_NAME="${APP_NAME}-as"
 LB_NAME="${APP_NAME}-lb"
@@ -63,7 +62,7 @@ LB_PROBE_NAME="${LB_NAME}-probe"
 IP_NAME="${APP_NAME}-pip"
 SUBNET_NAME="${APP_NAME}-subnet"
 VNET_NAME="${APP_NAME}-vnet"
-DIAGNOSTICS_STORAGE="${VM_NAME//-}diag"
+DIAGNOSTICS_STORAGE="${APP_NAME//-}diag"
 
 # For UBUNTU,OPENSUSE,RHEL use the following command to get the list of URNs:
 # UBUNTU
@@ -126,9 +125,11 @@ azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp --lb-n
 
 
 # all machines are passed for the parameters for metrics collection
-for ((t=0; t<$NUM_VM_INSTANCES ; t++))
-do
-   create_vm c "${VM_NAME}c"  "${NIC_NAME}c" "${VHD_STORAGE}c"
+for ((i=0; i<$NUM_VM_INSTANCES ; i++))
+do 
+   VM_NAME="${APP_NAME}-vm${i}"
+   #params VM_NAME NIC_NAME VHD_STORAGE SSH_PORT NAT_RULE
+   create_vm  $VM_NAME "${VM_NAME}-0nic" "${VM_NAME//-}st0" $((5001+i)) "ssh-vm${i}" 
 done
 
 
