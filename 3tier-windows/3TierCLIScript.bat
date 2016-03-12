@@ -114,7 +114,7 @@ SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biztier-allow ^
-	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
+	--access Allow --protocol * --direction Inbound --priority 100 ^
 	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
