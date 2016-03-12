@@ -41,7 +41,8 @@ DIAGNOSTICS_STORAGE="${VM_NAME//-}diag"
 # azure vm image $LOCATION  suse opensuse 13.2
 #RHEL
 #azure vm image list eastus2  redhat RHEL 7.2
- 
+
+
 LINUX_BASE_IMAGE=canonical:ubuntuserver:14.04.3-LTS:14.04.201601190
 
 #For a list of VM sizes see...
@@ -66,13 +67,18 @@ azure network vnet create --address-prefixes 172.17.0.0/16  --name $VNET_NAME $P
 azure network nsg create --name $NSG_NAME $POSTFIX
 
 #Create the subnet
-azure network vnet subnet create --vnet-name $VNET_NAME --address-prefix  172.17.0.0/24 --name $SUBNET_NAME --network-security-group-name $NSG_NAME --resource-group $RESOURCE_GROUP --subscription $SUBSCRIPTION
 
+azure network vnet subnet create --vnet-name $VNET_NAME \
+--address-prefix  "172.17.0.0/24" --name $SUBNET_NAME --network-security-group-name $NSG_NAME \
+--resource-group $RESOURCE_GROUP --subscription $SUBSCRIPTION
+
+ 
 #Create the public IP address (dynamic)
 azure network public-ip create --name $IP_NAME $POSTFIX
 
 #Create the NIC
-azure network nic create --public-ip-name $IP_NAME --subnet-name $SUBNET_NAME --subnet-vnet-name $VNET_NAME  --name $NIC_NAME $POSTFIX
+azure network nic create --public-ip-name $IP_NAME --subnet-name $SUBNET_NAME \
+--subnet-vnet-name $VNET_NAME --name $NIC_NAME $POSTFIX
 
 #Create the storage account for the OS VHD
 azure storage account create --type PLRS $POSTFIX $VHD_STORAGE
@@ -81,12 +87,21 @@ azure storage account create --type PLRS $POSTFIX $VHD_STORAGE
 azure storage account create --type LRS $POSTFIX $DIAGNOSTICS_STORAGE
 
 #Create the VM
-azure vm create --name $VM_NAME --os-type Linux --image-urn  $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --vnet-name $VNET_NAME --nic-name $NIC_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" $POSTFIX
+azure vm create --name $VM_NAME --os-type Linux \
+--image-urn  $LINUX_BASE_IMAGE --vm-size $VM_SIZE \
+--vnet-subnet-name $SUBNET_NAME --vnet-name $VNET_NAME \
+--nic-name $NIC_NAME --storage-account-name $VHD_STORAGE \
+--os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD \
+--boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" $POSTFIX
 
  
 #Attach a data disk
-azure vm disk attach-new -s $SUBSCRIPTION -g $RESOURCE_GROUP --vm-name $VM_NAME --size-in-gb 128 --vhd-name data1.vhd --storage-account-name $VHD_STORAGE
+azure vm disk attach-new -s $SUBSCRIPTION -g $RESOURCE_GROUP \
+--vm-name $VM_NAME --size-in-gb 128 --vhd-name data1.vhd \
+--storage-account-name $VHD_STORAGE
 
 #Allow SSH
-azure network nsg rule create -s $SUBSCRIPTION -g $RESOURCE_GROUP --nsg-name $NSG_NAME --direction Inbound --protocol Tcp --destination-port-range 22  --source-port-range "*"  --priority 100 --access Allow SSHAllow
+azure network nsg rule create -s $SUBSCRIPTION -g $RESOURCE_GROUP \
+--nsg-name $NSG_NAME --direction Inbound --protocol Tcp \
+--destination-port-range 22  --source-port-range "*"  --priority 100 --access Allow SSHAllow
 
