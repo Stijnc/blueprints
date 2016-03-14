@@ -13,8 +13,10 @@ IF "%~2"=="" (
     EXIT /B
     )
 
-:: Set up variables to build out the naming conventions for deploying
-:: the cluster
+
+:: Here's another approach that uses a template deplyment to create a SQL AlwaysOn AG 
+:: in a vnet and uses the same vnet to provision rest of the resources
+:: Set up variables to build out the naming conventions for deploying the cluster
 
 SET LOCATION=centralus
 SET APP_NAME=app1
@@ -22,12 +24,11 @@ SET ENVIRONMENT=dev
 SET USERNAME=testuser
 SET PASSWORD=AweS0me@PW
 
+:: Number of VMs in the service tier (in the same subnet)
 SET NUM_VM_INSTANCES_SERVICE_TIER=6
 
 :: Number of firewall VMs to be deployed to the DMZ subnet
-SET NUM_VM_INSTANCES_FIREWALL_TIER=2
-REM SET NUM_VM_INSTANCES_BIZ_TIER=3
-REM SET NUM_VM_INSTANCES_DB_TIER=2
+SET NUM_VM_INSTANCES_DMZ_TIER=2
 SET NUM_VM_INSTANCES_MANAGEMENT_TIER=1
 
 SET REMOTE_ACCESS_PORT=3389
@@ -60,9 +61,19 @@ SET JUMPBOX_SUBNET_PREFIX=192.168.2.0/24
 SET JUMPBOX_NSG_NAME=%APP_NAME%-management-nsg
 SET JUMPBOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
 
+SET DATATIER_SUBNET_NAME=%APP_NAME%-backend-subnet
+SET DATATIER_SUBNET_PREFIX=192.168.3.0/24
+
 :: For Windows, use the following command to get the list of URNs:
 :: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
 SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.0.20160126
+
+:: For virtual appliance, we're using Fortinet. To find the Fortinet VM image urn use the following:
+:: azure vm image list-offers %LOCATION% fortinet
+:: azure vm image list-skus %LOCATION% fortinet fortinet_fortigate-vm_v5
+:: azure vm image list %LOCATION% fortinet fortinet_fortigate-vm_v5 fortinet_fg-vm
+:: We obtain the image URN as fortinet:fortinet_fortigate-vm_v5:fortinet_fg-vm:5.2.3 in this case
+SET APPLIANCE_BASE_IMAGE=fortinet:fortinet_fortigate-vm_v5:fortinet_fg-vm:5.2.3
 
 :: For a list of VM sizes in a region, use the following command:
 :: azure vm sizes --location %LOCATION%
@@ -73,41 +84,34 @@ SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
 
 CALL azure config mode arm
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: 			Create enclosing resources									::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Create the enclosing resource group
-CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% --subscription %SUBSCRIPTION% %POSTFIX%
 
-:: Create the VNet
-CALL azure network vnet create --resource-group %RESOURCE_GROUP% --address-prefixes %VNET_PREFIX% --name %VNET_NAME% --location %LOCATION% %POSTFIX%
+:: The first step here is to deploy the arm template using some of the values above and resuse the enclosing
+:: to deploy the rest of the resources.
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Create enclosing resources									
 
 :: Create the storage account for diagnostics logs
 CALL azure storage account create --type LRS --location %LOCATION% %POSTFIX% %DIAGNOSTICS_STORAGE%
 
-:: Create the public IP address (dynamic)
+:: Create the public IP address (dynamic)`
 CALL azure network public-ip create --name %PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the management public IP address (dynamic)
 CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: 			Create Tiers												::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Create Tiers												
 CALL :CreateTier service %NUM_VM_INSTANCES_SERVICE_TIER% %SERVICE_SUBNET_PREFIX% true true
 
-REM CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24 true
-REM CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24 false
+CALL :CreateTier dmz %NUM_VM_INSTANCES_DMZ_TIER% 10.0.1.0/24 true
+
 CALL :CreateTier management %NUM_VM_INSTANCES_MANAGEMENT_TIER% %JUMPBOX_SUBNET_PREFIX% false false
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: 			Create Jump box												::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Create Jump box												
 CALL azure network nsg create --name %JUMPBOX_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %JUMPBOX_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
@@ -124,19 +128,31 @@ CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %JUMPBOX_SUBNE
 :: Make Jump Box publically accessible
 CALL azure network nic set --name %JUMPBOX_NIC_NAME% --public-ip-name %BASTION_PUBLIC_IP_NAME% %POSTFIX%
 
-:: DB Tier NSG rule [kirpas] Replace below with UDR
+:: Create a route table for the service tier
+CALL azure network route-table create --name service-tier-udr %POSTFIX%
 
-REM SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
+:: Create a rule to send all traffic destined to the data tier (192.168.3.0/24) to DMZ subnet (192.168.0.0/24)
+CALL azure network route-table route set --route-table-name service-tier-udr --name RouteToBackend ^
+										--address-prefix DATATIER_SUBNET_PREFIX ^
+										--next-hop-type VirtualAppliance ^
+										--next-hop-ip-address DMZ_SUBNET_PREFIX	%POSTFIX%									
 
-REM CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
-REM CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
-	REM --access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	REM --source-address-prefix 10.0.1.0/24 --source-port-range * ^
-	REM --destination-address-prefix * --destination-port-range * %POSTFIX%
+:: Associate the route table created in the previous step with service tier subnet
+CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %SERVICE_SUBNET_NAME% ^
+									--route-table-name service-tier-udr
 
-REM CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
-	REM --network-security-group-name %DB_TIER_NSG_NAME% %POSTFIX%
+:: Create a route table for the backend tier
+CALL azure network route-table create --name data-tier-udr %POSTFIX%
 
+:: Create a rule to send all traffic destined to the service tier (192.168.1.0/24) to DMZ subnet (192.168.0.0/24)
+CALL azure network route-table route set --route-table-name data-tier-udr --name RouteToFrontend ^
+										--address-prefix SERVICE_SUBNET_PREFIX ^
+										--next-hop-type VirtualAppliance ^
+										--next-hop-ip-address DMZ_SUBNET_PREFIX	%POSTFIX%	
+
+:: Associate the route table created in the previous step with data tier subnet
+CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %DATATIER_SUBNET_NAME% ^
+									--route-table-name data-tier-udr										
 GOTO :eof
 
 
@@ -226,6 +242,11 @@ SET /a RDP_PORT=50001 + %1
 SET LB_FRONTEND_NAME=%LB_NAME%-frontend
 SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 
+SET VM_IMAGE=%WINDOWS_BASE_IMAGE%
+IF %TIER_NAME%==dmz (
+	SET VM_IMAGE=%APPLIANCE_BASE_IMAGE%
+)
+
 :: Create NIC for VM1
 CALL azure network nic create --name %NIC_NAME% --subnet-name %SUBNET_NAME% ^
   --subnet-vnet-name %VNET_NAME% --location %LOCATION% %POSTFIX%
@@ -242,7 +263,7 @@ CALL azure storage account create --type PLRS --location %LOCATION% ^
 
 :: Create the VM
 CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
-  %WINDOWS_BASE_IMAGE% --vm-size %VM_SIZE% --vnet-subnet-name %SUBNET_NAME% ^
+  %VM_IMAGE% --vm-size %VM_SIZE% --vnet-subnet-name %SUBNET_NAME% ^
   --nic-name %NIC_NAME% --vnet-name %VNET_NAME% --storage-account-name ^
   %VHD_STORAGE% --os-disk-vhd "%VM_NAME%-osdisk.vhd" --admin-username ^
   "%USERNAME%" --admin-password "%PASSWORD%" --boot-diagnostics-storage-uri ^
@@ -252,11 +273,5 @@ CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
 :: Attach a data disk
 CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
   %VM_NAME%-data1.vhd --storage-account-name %VHD_STORAGE% %POSTFIX%
-
-goto :eof
-
-:CreateNetworkAppliance
-
-
 
 goto :eof
