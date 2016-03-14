@@ -1,21 +1,25 @@
-::ECHO OFF
+ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id admin-box-ip
+IF "%~2"=="" (
+    ECHO Usage: %0 subscription-id admin-address-prefix
+    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm
     EXIT /B
     )
 
-IF "%~2"=="" (
-    ECHO Usage: %0 subscription-id admin-box-ip
-    EXIT /B
-    )
+:: Explicitly set the subscription to avoid confusion as to which subscription
+:: is active/default
+
+SET SUBSCRIPTION=%1
+
+SET ADMIN_ADDRESS_PREFIX=%2
 
 :: Set up variables to build out the naming conventions for deploying
 :: the cluster
 
-SET LOCATION=centralus
+:: The APP_NAME variable must not exceed 4 characters in size. If it does the 15 character size limitation of the VM name may be exceeded.
 SET APP_NAME=app1
+SET LOCATION=centralus
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
 SET PASSWORD=AweS0me@PW
@@ -25,13 +29,22 @@ SET NUM_VM_INSTANCES_BIZ_TIER=3
 SET NUM_VM_INSTANCES_DB_TIER=2
 SET NUM_VM_INSTANCES_MANAGE_TIER=1
 
+SET VNET_IP_RANGE=10.0.0.0/16
+SET WEB_SUBNET_IP_RANGE=10.0.0.0/24
+SET BIZ_SUBNET_IP_RANGE=10.0.1.0/24
+SET DB_SUBNET_IP_RANGE=10.0.2.0/24
+SET MANAGE_SUBNET_IP_RANGE=10.0.3.0/24
+
+SET BIZ_ILB_IP=10.0.1.250
+
 SET REMOTE_ACCESS_PORT=3389
 
-:: Explicitly set the subscription to avoid confusion as to which subscription
-:: is active/default
-SET SUBSCRIPTION=%1
+:: For Windows, use the following command to get the list of URNs:
+:: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
+SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.0.20160126
 
-SET ADMIN_BOX_IP=%2
+:: For a list of VM sizes see: https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-size-specs/
+SET VM_SIZE=Standard_DS1
 
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
@@ -40,13 +53,6 @@ SET PUBLIC_IP_NAME=%APP_NAME%-pip
 SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
 SET JUMP_BOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
-
-:: For Windows, use the following command to get the list of URNs:
-:: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
-SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4.0.20160126
-
-:: For a list of VM sizes see...
-SET VM_SIZE=Standard_DS1
 
 :: Set up the postfix variables attached to most CLI commands
 SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
@@ -61,7 +67,7 @@ CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% ^
   --subscription %SUBSCRIPTION%
 
 :: Create the VNet
-CALL azure network vnet create --address-prefixes 10.0.0.0/16 ^
+CALL azure network vnet create --address-prefixes %VNET_IP_RANGE% ^
   --name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the storage account for diagnostics logs
@@ -77,22 +83,22 @@ CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers
 
-CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% 10.0.0.0/24 true
-CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% 10.0.1.0/24 true
-CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% 10.0.2.0/24 false
-CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% 10.0.3.0/24 false
+CALL :CreateTier web %NUM_VM_INSTANCES_WEB_TIER% %WEB_SUBNET_IP_RANGE% true
+CALL :CreateTier biz %NUM_VM_INSTANCES_BIZ_TIER% %BIZ_SUBNET_IP_RANGE% true
+CALL :CreateTier db %NUM_VM_INSTANCES_DB_TIER% %DB_SUBNET_IP_RANGE% false
+CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% %MANAGE_SUBNET_IP_RANGE% false
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: NSG Rules
 
-:: Jump box NSG rule and public ip
+:: Jump box NSG rule that allows inbound traffic from admin-address-prefix script parameter.
 
 SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 
 CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
-CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
+CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name admin-rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix %ADMIN_BOX_IP% --source-port-range * ^
+	--source-address-prefix %ADMIN_ADDRESS_PREFIX% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-managetier-subnet ^
@@ -107,9 +113,23 @@ CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_
 SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
-CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name rdp-allow ^
-	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
-	--source-address-prefix 10.0.1.0/24 --source-port-range * ^
+
+:: Allow inbound traffic from business tier subnet
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biztier-allow ^
+	--access Allow --protocol * --direction Inbound --priority 100 ^
+	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range * ^
+	--destination-address-prefix * --destination-port-range * %POSTFIX%
+
+:: Allow inbound traffic from management subnet
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name mange-rdp-allow ^
+	--access Allow --protocol Tcp --direction Inbound --priority 200 ^
+	--source-address-prefix %MANAGE_SUBNET_IP_RANGE% --source-port-range * ^
+	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
+
+:: Deny all other inbound traffic from within vnet
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name vnet-deny ^
+	--access Deny --protocol * --direction Inbound --priority 300 ^
+	--source-address-prefix VirtualNetwork --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
@@ -155,7 +175,7 @@ IF %LB_NEEDED%==true (
 		ECHO Creating frontend-ip for biz tier using subnet %SUBNET_NAME%
 		:: Associate the frontend-ip with a private IP address
 		CALL azure network lb frontend-ip create --name %LB_FRONTEND_NAME% --lb-name ^
-		  %LB_NAME% --private-ip-address 10.0.1.5 --subnet-name %SUBNET_NAME% ^
+		  %LB_NAME% --private-ip-address %BIZ_ILB_IP% --subnet-name %SUBNET_NAME% ^
 		  --subnet-vnet-name %VNET_NAME% %POSTFIX%
 	)
 
