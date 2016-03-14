@@ -3,34 +3,45 @@
 #define functions
 
 create_vm()
-{
+{ 
   
- 
-  VM_NAME=$1
-  NIC_NAME=$2
-  VHD_STORAGE=$3
-  SSH_PORT=$4
-  NAT_RULE=$5
-  #Create NIC for VM1 
+  TIER_NAME=$2  
+  SUBNET_NAME=$3
+  HAS_LB=$4
+  LB_NAME=$5
+  
+  VM_NAME="${$APP_NAME}-${TIER_NAME}-vm${1}"
+  NIC_NAME="${VM_NAME}-0nic"
+  VHD_STORAGE="${VM_NAME//-}st0"
+  RDP_PORT=((50001 + $1))
+  LB_FRONTEND_NAME="${LB_NAME}-frontend"
+  LB_BACKEND_NAME="${LB_NAME}-backend-pool"
+  
+  #Create NIC for VM1
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME --subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
-
-  #Add NIC to back-end address pool
-  azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
-
-  #Create NAT rule for RDP
-  azure network lb inbound-nat-rule create --name $NAT_RULE --frontend-port $SSH_PORT --backend-port 22 --lb-name $LB_NAME --frontend-ip-name $LB_FRONTEND_NAME $POSTFIX
-
-  #Add NAT rule to the NIC
-  azure network nic inbound-nat-rule add --name $NIC_NAME --lb-name $LB_NAME --lb-inbound-nat-rule-name $NAT_RULE $POSTFIX
-
+  
+  if [ $HAS_LB ]
+  then
+	#Add NIC to back-end address pool
+	azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
+  fi
+  
   #Create the storage account for the OS VHD
-  azure storage account create --type PLRS --location $LOCATION $VHD_STORAGE $POSTFIX
-
-  #Create the VM                                                                                                                                                                                                                                                                                                                                                                                
-  azure vm create --name $VM_NAME --os-type Linux --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" --availset-name $AVAILSET_NAME --location $LOCATION $POSTFIX
+  azure storage account create --type PLRS --location $LOCATION \
+  $VHD_STORAGE $POSTFIX
+  
+  #Create the VM
+  azure vm create --name $VM_NAME --os-type Linux \
+  --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME \
+  --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE \
+  --os-disk-vhd "${VM_NAME%}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD \
+  --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
+  --availset-name $AVAILSET_TIER_NAME --location $LOCATION $POSTFIX
 
   #Attach a data disk
-  azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 --vhd-name "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
+  azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 \
+    --vhd-name "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
+  
   
 }
 
@@ -63,14 +74,15 @@ CreateTier()
       #Associate the frontend-ip with the public IP address
       azure network lb frontend-ip create --name $LB_FRONTEND_NAME --lb-name $LB_NAME --public-ip-name $PUBLIC_IP_NAME $POSTFIX
     
-    fi
+  fi
       
     if [ $TIER_NAME = 'biz' ] 
     then
  
       echo Creating frontend-ip for biz tier using subnet $SUBNET_NAME
       #Associate the frontend-ip with a private IP address
-      azure network lb frontend-ip create --name $LB_FRONTEND_NAME --lb-name $LB_NAME --private-ip-address 10.0.1.5 --subnet-name $SUBNET_NAME% --subnet-vnet-name $VNET_NAME $POSTFIX
+      azure network lb frontend-ip create --name $LB_FRONTEND_NAME --lb-name $LB_NAME \
+	--private-ip-address 10.0.1.5 --subnet-name $SUBNET_NAME% --subnet-vnet-name $VNET_NAME $POSTFIX
       
     fi
     
@@ -81,7 +93,9 @@ CreateTier()
     azure network lb probe create --name $LB_PROBE_NAME --lb-name $LB_NAME --port 80 --interval 5 --count 2 --protocol http --path "/"  $POSTFIX
     
     #Create a load balancer rule for HTTP
-    azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp --lb-name $LB_NAME --frontend-port 80 --backend-port 80 --frontend-ip-name $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
+    azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp \
+      --lb-name $LB_NAME --frontend-port 80 --backend-port 80 \
+      --frontend-ip-name $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
  
   fi
 
@@ -102,13 +116,6 @@ CreateTier()
 }
 
 
-
-
-
-
-
-
-
 if [ -z  $1  ] | [ -z  $2  ]
 then
 	echo  "Usage:  ${0}  subscription-id admin-address-prefix"
@@ -124,14 +131,14 @@ LOCATION=eastus2
 APP_NAME=app1
 ENVIRONMENT=dev
 USERNAME=testuser
-PASSWORD=AweS0me@PW
+PASSWORD="AweS0me@PW"
 
 NUM_VM_INSTANCES_WEB_TIER=3
 NUM_VM_INSTANCES_BIZ_TIER=3
 NUM_VM_INSTANCES_DB_TIER=2
 NUM_VM_INSTANCES_MANAGE_TIER=1
 
-SSH_ACCESS_PORT=3389
+SSH_ACCESS_PORT=22
 
 #Explicitly set the subscription to avoid confusion as to which subscription
 #is active/default
