@@ -18,7 +18,7 @@ SET ADMIN_ADDRESS_PREFIX=%2
 :: the cluster
 
 :: The APP_NAME variable must not exceed 4 characters in size. If it does the 15 character size limitation of the VM name may be exceeded.
-SET APP_NAME=app0
+SET APP_NAME=app1
 SET LOCATION=centralus
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
@@ -91,12 +91,12 @@ CALL :CreateTier manage %NUM_VM_INSTANCES_MANAGE_TIER% %MANAGE_SUBNET_IP_RANGE% 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: NSG Rules
 
-:: Jump box NSG rule and public ip
+:: Jump box NSG rule that allows inbound traffic from admin-address-prefix script parameter.
 
 SET MANAGE_NSG_NAME=%APP_NAME%-manage-nsg
 
 CALL azure network nsg create --name %MANAGE_NSG_NAME% --location %LOCATION% %POSTFIX%
-CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name rdp-allow ^
+CALL azure network nsg rule create --nsg-name %MANAGE_NSG_NAME% --name admin-rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
 	--source-address-prefix %ADMIN_ADDRESS_PREFIX% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
@@ -113,9 +113,23 @@ CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_
 SET DB_TIER_NSG_NAME=%APP_NAME%-dbtier-nsg
 
 CALL azure network nsg create --name %DB_TIER_NSG_NAME% --location %LOCATION% %POSTFIX%
+
+:: Allow inbound traffic from business tier subnet
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biztier-allow ^
 	--access Allow --protocol * --direction Inbound --priority 100 ^
 	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range * ^
+	--destination-address-prefix * --destination-port-range * %POSTFIX%
+
+:: Allow inbound traffic from management subnet
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name mange-rdp-allow ^
+	--access Allow --protocol Tcp --direction Inbound --priority 200 ^
+	--source-address-prefix %MANAGE_SUBNET_IP_RANGE% --source-port-range * ^
+	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
+
+:: Deny all other inbound traffic from within vnet
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name vnet-deny ^
+	--access Deny --protocol * --direction Inbound --priority 300 ^
+	--source-address-prefix VirtualNetwork --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %APP_NAME%-dbtier-subnet ^
