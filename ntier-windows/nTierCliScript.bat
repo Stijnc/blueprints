@@ -13,11 +13,14 @@ IF "%~2"=="" (
     EXIT /B
     )
 
-
-:: Here's another approach that uses a template deplyment to create a SQL AlwaysOn AG 
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Here's an approach that uses a template deployment to create a SQL AlwaysOn AG 
 :: in a vnet and uses the same vnet to provision rest of the resources
-:: Set up variables to build out the naming conventions for deploying the cluster
+:: TODO - Location of marketplace deployed template is not yet known, PG is looped in
+:: to figure this out.
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:: Set up variables to build out the naming conventions for deploying the cluster
 SET LOCATION=centralus
 SET APP_NAME=app1
 SET ENVIRONMENT=dev
@@ -29,8 +32,8 @@ SET NUM_VM_INSTANCES_SERVICE_TIER=6
 
 :: Number of firewall VMs to be deployed to the DMZ subnet
 SET NUM_VM_INSTANCES_DMZ_TIER=2
-SET NUM_VM_INSTANCES_MANAGEMENT_TIER=1
 
+SET NUM_VM_INSTANCES_MANAGEMENT_TIER=1
 SET REMOTE_ACCESS_PORT=3389
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
@@ -45,7 +48,6 @@ SET VNET_PREFIX=192.168.0.0/16
 SET PUBLIC_IP_NAME=%APP_NAME%-pip
 SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
-
 
 :: Firewall subnet
 SET DMZ_SUBNET_NAME=%APP_NAME%-dmz-subnet
@@ -85,9 +87,6 @@ SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
 CALL azure config mode arm
 
 
-:: The first step here is to deploy the arm template using some of the values above and resuse the enclosing
-:: to deploy the rest of the resources.
-
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create enclosing resources									
 
@@ -103,15 +102,17 @@ CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers												
+
 CALL :CreateTier service %NUM_VM_INSTANCES_SERVICE_TIER% %SERVICE_SUBNET_PREFIX% true true
 
-CALL :CreateTier dmz %NUM_VM_INSTANCES_DMZ_TIER% 10.0.1.0/24 true
+CALL :CreateTier dmz %NUM_VM_INSTANCES_DMZ_TIER% DMZ_SUBNET_PREFIX% true true 
 
 CALL :CreateTier management %NUM_VM_INSTANCES_MANAGEMENT_TIER% %JUMPBOX_SUBNET_PREFIX% false false
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Create Jump box												
+:: Create Jumpbox resources										
+
 CALL azure network nsg create --name %JUMPBOX_NSG_NAME% --location %LOCATION% %POSTFIX%
 CALL azure network nsg rule create --nsg-name %JUMPBOX_NSG_NAME% --name rdp-allow ^
 	--access Allow --protocol Tcp --direction Inbound --priority 100 ^
@@ -242,9 +243,16 @@ SET /a RDP_PORT=50001 + %1
 SET LB_FRONTEND_NAME=%LB_NAME%-frontend
 SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 
+:: Use Fortinet image for virtual appliances
 SET VM_IMAGE=%WINDOWS_BASE_IMAGE%
 IF %TIER_NAME%==dmz (
 	SET VM_IMAGE=%APPLIANCE_BASE_IMAGE%
+)
+
+SET AVAILSET_STRING=--availset-name %AVAILSET_TIER_NAME%
+
+IF %TIER_NAME%==management (
+	SET AVAILSET_STRING=
 )
 
 :: Create NIC for VM1
@@ -267,11 +275,15 @@ CALL azure vm create --name %VM_NAME% --os-type Windows --image-urn ^
   --nic-name %NIC_NAME% --vnet-name %VNET_NAME% --storage-account-name ^
   %VHD_STORAGE% --os-disk-vhd "%VM_NAME%-osdisk.vhd" --admin-username ^
   "%USERNAME%" --admin-password "%PASSWORD%" --boot-diagnostics-storage-uri ^
-  "https://%DIAGNOSTICS_STORAGE%.blob.core.windows.net/" --availset-name ^
-  %AVAILSET_TIER_NAME% --location %LOCATION% %POSTFIX%
+  "https://%DIAGNOSTICS_STORAGE%.blob.core.windows.net/" --location %LOCATION% %AVAILSET_STRING% %POSTFIX%
 
 :: Attach a data disk
 CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
   %VM_NAME%-data1.vhd --storage-account-name %VHD_STORAGE% %POSTFIX%
+  
+:: For DMZ tier VMs, enable IP forwarding
+IF %TIER_NAME%==dmz (
+	CALL azure network nic set --name %NIC_NAME% --enable-ip-forwarding true %POSTFIX%
+)
 
 goto :eof
