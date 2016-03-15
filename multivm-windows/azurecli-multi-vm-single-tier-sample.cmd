@@ -98,7 +98,8 @@ CALL azure network lb rule create --name %LB_NAME%-rule-http --protocol tcp ^
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES%) DO CALL :CreateVM %%I
+SET /a END_INDEX=NUM_VM_INSTANCES-1
+FOR /L %%I IN (0,1,%END_INDEX%) DO CALL :CreateVM %%I
 
 GOTO :eof
 
