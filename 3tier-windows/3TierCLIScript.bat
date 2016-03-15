@@ -126,9 +126,15 @@ CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name mange-rd
 	--source-address-prefix %MANAGE_SUBNET_IP_RANGE% --source-port-range * ^
 	--destination-address-prefix * --destination-port-range %REMOTE_ACCESS_PORT% %POSTFIX%
 
+:: Allow inbound traffic from Azure Load Balancer
+CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name lb-allow ^
+	--access Allow --protocol * --direction Inbound --priority 300 ^
+	--source-address-prefix AzureLoadBalancer --source-port-range * ^
+	--destination-address-prefix * --destination-port-range * %POSTFIX%
+
 :: Deny all other inbound traffic from within vnet
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name vnet-deny ^
-	--access Deny --protocol * --direction Inbound --priority 300 ^
+	--access Deny --protocol * --direction Inbound --priority 1000 ^
 	--source-address-prefix VirtualNetwork --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
