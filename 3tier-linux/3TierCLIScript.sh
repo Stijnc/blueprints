@@ -57,7 +57,7 @@ CreateVm()
 CreateTier()
 {
   
-  echo Creating %1 tier
+  echo Creating $1 tier
   
   TIER_NAME=$1
   NUM_VM_INSTANCES=$2
@@ -147,7 +147,7 @@ ADMIN_ADDRESS_PREFIX=$2
 # the cluster
 
 LOCATION=eastus2
-APP_NAME=app300
+APP_NAME=app500
 ENVIRONMENT=dev
 USERNAME=testuser
 PASSWORD="AweS0me@PW"
@@ -235,8 +235,6 @@ azure network vnet subnet set --vnet-name $VNET_NAME --name "${APP_NAME}-managet
 
 #Make Jump Box publically accessible
 azure network nic set --name $JUMP_BOX_NIC_NAME --public-ip-name $BASTION_PUBLIC_IP_NAME $POSTFIX
-CALL azure network nic set --name %JUMP_BOX_NIC_NAME% --public-ip-name %BASTION_PUBLIC_IP_NAME% %POSTFIX%
-#DB Tier NSG rule
 
 DB_TIER_NSG_NAME="${APP_NAME}-dbtier-nsg"
 
@@ -249,9 +247,9 @@ azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name biztier-allow 
 --destination-address-prefix "*" --destination-port-range "*" $POSTFIX
 
 #Allow inbound traffic from management subnet
-azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name mange-rdp-allow \
+azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name manage-ssh-allow \
 --access Allow --protocol Tcp --direction Inbound --priority 200 \
---source-address-prefix %MANAGE_SUBNET_IP_RANGE% --source-port-range "*" \
+--source-address-prefix $MANAGE_SUBNET_IP_RANGE --source-port-range "*" \
 --destination-address-prefix "*" --destination-port-range $REMOTE_ACCESS_PORT $POSTFIX
 
 #Deny all other inbound traffic from within vnet
@@ -262,8 +260,6 @@ azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name vnet-deny \
 
 azure network vnet subnet set --vnet-name $VNET_NAME --name "${APP_NAME}-dbtier-subnet" \
 --network-security-group-name $DB_TIER_NSG_NAME $POSTFIX
-
-
 
 
 
