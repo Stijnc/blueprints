@@ -1,8 +1,8 @@
 ECHO OFF
 SETLOCAL
 
-IF "%~2"=="" (
-    ECHO Usage: %0 subscription-id admin-address-prefix
+IF "%2"=="" (
+    ECHO Usage: %0 subscription-id admin-address-prefix-CIDR-format 
     ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm
     EXIT /B
     )
@@ -52,7 +52,7 @@ SET VNET_NAME=%APP_NAME%-vnet
 SET PUBLIC_IP_NAME=%APP_NAME%-pip
 SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
-SET JUMP_BOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
+SET JUMP_BOX_NIC_NAME=%APP_NAME%-manage-vm0-0nic
 
 :: Set up the postfix variables attached to most CLI commands
 SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
@@ -128,7 +128,7 @@ CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name mange-rd
 
 :: Deny all other inbound traffic from within vnet
 CALL azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name vnet-deny ^
-	--access Deny --protocol * --direction Inbound --priority 300 ^
+	--access Deny --protocol * --direction Inbound --priority 1000 ^
 	--source-address-prefix VirtualNetwork --source-port-range * ^
 	--destination-address-prefix * --destination-port-range * %POSTFIX%
 
@@ -198,7 +198,8 @@ CALL azure availset create --name %AVAILSET_TIER_NAME% --location %LOCATION% %PO
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES%) DO CALL :CreateVM %%I %TIER_NAME% %SUBNET_NAME% %LB_NEEDED% %LB_NAME%
+SET /a END_INDEX=NUM_VM_INSTANCES-1
+FOR /L %%I IN (0,1,%END_INDEX%) DO CALL :CreateVM %%I %TIER_NAME% %SUBNET_NAME% %LB_NEEDED% %LB_NAME%
 
 GOTO :eof
 
