@@ -1,5 +1,3 @@
-:: This script was written for Azure CLI version 0.9.16 (pre-release)
-
 ECHO OFF
 SETLOCAL
 
