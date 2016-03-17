@@ -2,7 +2,7 @@ ECHO OFF
 SETLOCAL
 
 IF "%2"=="" (
-    ECHO Usage: %0 subscription-id admin-password 
+    ECHO Usage: %0 subscription-id admin-password
     EXIT /B
     )
 
@@ -48,15 +48,15 @@ CALL azure config mode arm
 
 :: Create the enclosing resource group
 CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% ^
-  --subscription %SUBSCRIPTION% 
+  --subscription %SUBSCRIPTION%
 
 :: Create the VNet
 CALL azure network vnet create --address-prefixes 172.17.0.0/16 ^
   --name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the network security group
-CALL azure network nsg create --name %NSG_NAME% --location %LOCATION% %POSTFIX% 
-  
+CALL azure network nsg create --name %NSG_NAME% --location %LOCATION% %POSTFIX%
+
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   172.17.0.0/24 --name %SUBNET_NAME% --network-security-group-name %NSG_NAME% ^
@@ -95,11 +95,3 @@ CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
 CALL azure network nsg rule create --nsg-name %NSG_NAME% --direction Inbound ^
   --protocol Tcp --destination-port-range 3389 --source-port-range * ^
   --priority 100 --access Allow RDPAllow %POSTFIX%
-
-GOTO :eof
-
-
-:usage
-ECHO Usage: %0 subscription-id admin-user password
-
-
