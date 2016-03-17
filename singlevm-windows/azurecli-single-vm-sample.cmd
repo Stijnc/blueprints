@@ -1,8 +1,8 @@
 ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id
+IF "%2"=="" (
+    ECHO Usage: %0 subscription-id admin-password 
     EXIT /B
     )
 
@@ -13,7 +13,7 @@ SET LOCATION=eastus2
 SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
-SET PASSWORD=AweS0me@PW
+SET PASSWORD=%2
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
 :: is active/default
@@ -95,3 +95,11 @@ CALL azure vm disk attach-new --vm-name %VM_NAME% --size-in-gb 128 --vhd-name ^
 CALL azure network nsg rule create --nsg-name %NSG_NAME% --direction Inbound ^
   --protocol Tcp --destination-port-range 3389 --source-port-range * ^
   --priority 100 --access Allow RDPAllow %POSTFIX%
+
+GOTO :eof
+
+
+:usage
+ECHO Usage: %0 subscription-id admin-user password
+
+

@@ -3,8 +3,8 @@
 ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id
+IF "%~2"=="" (
+    ECHO Usage: %0 subscription-id admin-password
     EXIT /B
     )
 
@@ -15,7 +15,7 @@ SET LOCATION=eastus2
 SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
-SET PASSWORD=AweS0me@PW
+SET PASSWORD=%2
 
 SET NUM_VM_INSTANCES=2
 
