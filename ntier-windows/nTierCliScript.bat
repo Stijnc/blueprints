@@ -13,16 +13,9 @@ IF "%~2"=="" (
     EXIT /B
     )
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Here's an approach that uses a template deployment to create a SQL AlwaysOn AG 
-:: in a vnet and uses the same vnet to provision rest of the resources
-:: TODO - Location of marketplace deployed template is not yet known, PG is looped in
-:: to figure this out.
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 :: Set up variables to build out the naming conventions for deploying the cluster
 SET LOCATION=centralus
-SET APP_NAME=app1
+SET APP_NAME=app3
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
 SET PASSWORD=AweS0me@PW
@@ -41,30 +34,32 @@ SET REMOTE_ACCESS_PORT=3389
 SET SUBSCRIPTION=%1
 SET ADMIN_BOX_IP=%2
 
+SET BIZ_ILB_IP=10.0.1.250
+
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
 SET VNET_NAME=%APP_NAME%-vnet
-SET VNET_PREFIX=192.168.0.0/16
+SET VNET_IP_RANGE=10.0.0.0/16
 SET PUBLIC_IP_NAME=%APP_NAME%-pip
 SET BASTION_PUBLIC_IP_NAME=%APP_NAME%-bastion-pip
 SET DIAGNOSTICS_STORAGE=%APP_NAME:-=%diag
 
 :: Firewall subnet
 SET DMZ_SUBNET_NAME=%APP_NAME%-dmz-subnet
-SET DMZ_SUBNET_PREFIX=192.168.0.0/24
+SET DMZ_SUBNET_PREFIX=10.0.0.0/24
 
 :: Service subnet
-SET SERVICE_SUBNET_NAME=%APP_NAME%-service-subnet
-SET SERVICE_SUBNET_PREFIX=192.168.1.0/24
+SET SERVICE_SUBNET_NAME=%APP_NAME%-svc-subnet
+SET SERVICE_SUBNET_PREFIX=10.0.1.0/24
 
 :: Jumpbox subnet
-SET JUMPBOX_SUBNET_NAME=%APP_NAME%-management-subnet
-SET JUMPBOX_SUBNET_PREFIX=192.168.2.0/24
-SET JUMPBOX_NSG_NAME=%APP_NAME%-management-nsg
+SET JUMPBOX_SUBNET_NAME=%APP_NAME%-mgt-subnet
+SET JUMPBOX_SUBNET_PREFIX=10.0.2.0/24
+SET JUMPBOX_NSG_NAME=%APP_NAME%-mgt-nsg
 SET JUMPBOX_NIC_NAME=%APP_NAME%-manage-vm1-0nic
 
 SET DATATIER_SUBNET_NAME=%APP_NAME%-backend-subnet
-SET DATATIER_SUBNET_PREFIX=192.168.3.0/24
+SET DATATIER_SUBNET_PREFIX=10.0.3.0/24
 
 :: For Windows, use the following command to get the list of URNs:
 :: azure vm image list %LOCATION% MicrosoftWindowsServer WindowsServer 2012-R2-Datacenter
@@ -86,7 +81,22 @@ SET POSTFIX=--resource-group %RESOURCE_GROUP% --subscription %SUBSCRIPTION%
 
 CALL azure config mode arm
 
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Here's an approach that uses a template deployment to create a SQL AlwaysOn AG 
+:: in a vnet and uses the same vnet to provision rest of the resources
 
+:: Deploy SQL AG using saved template
+::CALL azure group deployment create -f sql-alwayson-arm-template.json -e sql-alwayson-arm-template-parameters.json %RESOURCE_GROUP% %RESOURCE_GROUP%-deploy
+::SET SQLAG-DEPLOYMENT-NAME=%RESOURCE_GROUP%-deploy
+::CALL azure group deployment create --template-file sql-alwayson-arm-template.json ^
+						::--parameters '{"virtualNetworkName":{"value":"%VNET_NAME%"}}' ^
+						::--parameters-file sql-alwayson-arm-template-parameters.json ^
+						::--name %SQLAG-DEPLOYMENT-NAME% %POSTFIX%
+						
+:: Since route is still under investigation let's create resource group and vnet
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+CALL azure group create --name %RESOURCE_GROUP% %LOCATION%
+CALL azure network vnet create --name %VNET_NAME% --address-prefixes %VNET_IP_RANGE% --location %LOCATION% %POSTFIX%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create enclosing resources									
 
@@ -103,11 +113,11 @@ CALL azure network public-ip create --name %BASTION_PUBLIC_IP_NAME% --location %
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create Tiers												
 
-CALL :CreateTier service %NUM_VM_INSTANCES_SERVICE_TIER% %SERVICE_SUBNET_PREFIX% true true
+CALL :CreateTier svc %NUM_VM_INSTANCES_SERVICE_TIER% %SERVICE_SUBNET_PREFIX% true true
 
-CALL :CreateTier dmz %NUM_VM_INSTANCES_DMZ_TIER% DMZ_SUBNET_PREFIX% true true 
+CALL :CreateTier dmz %NUM_VM_INSTANCES_DMZ_TIER% %DMZ_SUBNET_PREFIX% true true 
 
-CALL :CreateTier management %NUM_VM_INSTANCES_MANAGEMENT_TIER% %JUMPBOX_SUBNET_PREFIX% false false
+CALL :CreateTier mgt %NUM_VM_INSTANCES_MANAGEMENT_TIER% %JUMPBOX_SUBNET_PREFIX% false false
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -130,17 +140,17 @@ CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %JUMPBOX_SUBNE
 CALL azure network nic set --name %JUMPBOX_NIC_NAME% --public-ip-name %BASTION_PUBLIC_IP_NAME% %POSTFIX%
 
 :: Create a route table for the service tier
-CALL azure network route-table create --name service-tier-udr %POSTFIX%
+CALL azure network route-table create --name svc-tier-udr --location %LOCATION% %POSTFIX%
 
 :: Create a rule to send all traffic destined to the data tier (192.168.3.0/24) to DMZ subnet (192.168.0.0/24)
-CALL azure network route-table route set --route-table-name service-tier-udr --name RouteToBackend ^
+CALL azure network route-table route set --route-table-name svc-tier-udr --name RouteToBackend ^
 										--address-prefix DATATIER_SUBNET_PREFIX ^
 										--next-hop-type VirtualAppliance ^
 										--next-hop-ip-address DMZ_SUBNET_PREFIX	%POSTFIX%									
 
 :: Associate the route table created in the previous step with service tier subnet
 CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %SERVICE_SUBNET_NAME% ^
-									--route-table-name service-tier-udr
+									--route-table-name svc-tier-udr %POSTFIX%
 
 :: Create a route table for the backend tier
 CALL azure network route-table create --name data-tier-udr %POSTFIX%
@@ -184,15 +194,15 @@ IF %LB_NEEDED%==true (
 	:: Create the load balancer
 	CALL azure network lb create --name %LB_NAME% --location %LOCATION% %POSTFIX%
 
-	IF %TIER_NAME%==web (
-		ECHO Creating frontend-ip for web tier lb
+	IF %TIER_NAME%==svc (
+		ECHO Creating frontend-ip for service tier lb
 		:: Associate the frontend-ip with the public IP address
 		CALL azure network lb frontend-ip create --name %LB_FRONTEND_NAME% --lb-name ^
 		  %LB_NAME% --public-ip-name %PUBLIC_IP_NAME% %POSTFIX%
 	)
 
-	IF %TIER_NAME%==biz (
-		ECHO Creating frontend-ip for biz tier using subnet %SUBNET_NAME%
+	IF %TIER_NAME%==dmz (
+		ECHO Creating frontend-ip for dmz tier using subnet %SUBNET_NAME%
 		:: Associate the frontend-ip with a private IP address
 		CALL azure network lb frontend-ip create --name %LB_FRONTEND_NAME% --lb-name ^
 		  %LB_NAME% --private-ip-address 10.0.1.5 --subnet-name %SUBNET_NAME% ^
@@ -251,7 +261,7 @@ IF %TIER_NAME%==dmz (
 
 SET AVAILSET_STRING=--availset-name %AVAILSET_TIER_NAME%
 
-IF %TIER_NAME%==management (
+IF %TIER_NAME%==mgt (
 	SET AVAILSET_STRING=
 )
 
