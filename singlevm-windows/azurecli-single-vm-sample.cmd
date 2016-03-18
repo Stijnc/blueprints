@@ -1,8 +1,8 @@
 ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id
+IF "%2"=="" (
+    ECHO Usage: %0 subscription-id admin-password
     EXIT /B
     )
 
@@ -13,7 +13,7 @@ SET LOCATION=eastus2
 SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
-SET PASSWORD=AweS0me@PW
+SET PASSWORD=%2
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
 :: is active/default
@@ -48,15 +48,15 @@ CALL azure config mode arm
 
 :: Create the enclosing resource group
 CALL azure group create --name %RESOURCE_GROUP% --location %LOCATION% ^
-  --subscription %SUBSCRIPTION% 
+  --subscription %SUBSCRIPTION%
 
 :: Create the VNet
 CALL azure network vnet create --address-prefixes 172.17.0.0/16 ^
   --name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the network security group
-CALL azure network nsg create --name %NSG_NAME% --location %LOCATION% %POSTFIX% 
-  
+CALL azure network nsg create --name %NSG_NAME% --location %LOCATION% %POSTFIX%
+
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   172.17.0.0/24 --name %SUBNET_NAME% --network-security-group-name %NSG_NAME% ^
