@@ -11,10 +11,13 @@ fi
 LOCATION=eastus2
 APP_NAME=app1
 ENVIRONMENT=dev
-USERNAME=administrator1
-PASSWORD="AweS0me@PW"
+USERNAME=""
+PASSWORD=""
 
+read -p "Enter username "  USERNAME
+read -s -p "Enter password " PASSWORD
 
+ 
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
 SUBSCRIPTION=$1

@@ -54,8 +54,13 @@ fi
 LOCATION=eastus2
 APP_NAME=app2
 ENVIRONMENT=dev
-USERNAME=administrator1
-PASSWORD="AweS0me@PW"
+
+USERNAME=""
+PASSWORD=""
+
+read -p "Enter username "  USERNAME
+read -s -p "Enter password " PASSWORD
+
 NUM_VM_INSTANCES=2
 
 # Explicitly set the subscription to avoid confusion as to which subscription
