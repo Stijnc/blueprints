@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 # Backlog
-# TODO: Add final dictionary comparision 
-# TODO: Genrate report
+# Review
 
 
 import argparse
@@ -15,9 +14,7 @@ parser.add_argument("TargetRG_JSON", help="The deployed resource group JSON file
 parser.add_argument("DesiredState_JSON", help="The desired state definition JSON file used for validation")
 
 args = parser.parse_args()
-print(args)
-print(args.TargetRG_JSON)
-print(args.DesiredState_JSON)
+print("\nRunning Validate Resource Group against desired state.")
 
 
 
@@ -31,37 +28,58 @@ with open(args.DesiredState_JSON) as data_file:
 # Input an Array
 # Each array entry is a Dict.
 
-def parseJson(data):
+# Go through JSON Dictionary and return a Dictionary with a count for each deployed asset.
+def getAssetCount(data):
 	tmpDict = {}
-	print("parseJson")
-	print("len data",len(data))
 	for i in data:
-		print("i[type]:",i['type'])
+		#print("i[type]:",i['type'])
 		if (i['type'] in tmpDict):
-			print("updating entry")
+			#print("updating entry")
 			tmpDict[i['type']] = tmpDict[i['type']] + 1
-			print("tmpDict[",i['type'],"]=",tmpDict[i['type']] )
+			#print("tmpDict[",i['type'],"]=",tmpDict[i['type']] )
 		else:
-			print("adding entry",i['type'])
+			#print("adding entry",i['type'])
 			tmpDict[i['type']] = 1
-			print("tmpDict[",i['type'],"]=",tmpDict[i['type']] )
-		print("\n ")
-		# for k, v in i.items():
-			# print(k,v)
-	print("end parseJson tmpDIct",tmpDict)
+			#print("tmpDict[",i['type'],"]=",tmpDict[i['type']] )
+		#print("\n ")
 	return tmpDict
 	
 	
+# Compare the deployed assets of the targeted deployement with the desired state.
+def compareAssets(refDict, tarDict):
+	tmpDict = {}
+	keysRef = refDict.keys()
+	keysTar = tarDict.keys()
+	for x in keysRef:
+		if (x in tarDict):
+			if(refDict[x] != tarDict[x]):
+				tmpDict[x]= refDict[x] - tarDict[x]
+		else:
+			tmpDict[x] = "missing"
+	return tmpDict
+	
+# Generate a report of the findings
+def generateReport(reportDict, refDict):
+	if (len(reportDict) > 0):
+		print("Failed: Deployments do not match:")
+		for k,v  in reportDict.items():
+			if (reportDict[k] == "missing"):
+				print("\t",k,"is",v)
+			else:
+				if (v > 0):
+					print("\t",k,"is missing",v,"deployments.")
+				else: 
+					print("\t",k,"has",abs(v),"extra deployments.")
+	else:
+		print("Passed: Deployment matches desired state!")
+		for k,v in refDict.items():
+			print("\t",k,"has",v,"deployed")
+		
 
-			
-print("TargetRG JSON PRINT")
-#pprint(targetRGJSON)
-tgDict = parseJson(targetRGJSON["resources"])
-print("\ntgDict:",tgDict)
+# parse through JSON to count assets	
+tgDict = getAssetCount(targetRGJSON["resources"])
+dsDict = getAssetCount(dsRGJSON["resources"])
 
-
-print("\n\nDesired State JSON Print")
-# #pprint(dsRGJSON)
-dsDict = parseJson(dsRGJSON["resources"])
-print ("\ndsDict:",dsDict)
-
+tmpDict = compareAssets(dsDict,tgDict)
+print("\n",'-'*10,"Results",'-'*10)
+generateReport(tmpDict,dsDict)

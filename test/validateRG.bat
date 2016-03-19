@@ -18,9 +18,9 @@ SET SUBSCRIPTION=%1
 SET TARGETRG=%2
 SET DSRG=%3
 
-ECHO %SUBSCRIPTION%
-ECHO %TARGETRG%
-ECHO %DSRG%
+ECHO Using Subscription: %SUBSCRIPTION%
+ECHO Target Resource Group: %TARGETRG%
+ECHO Desired State Resource Group: %DSRG%
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Call CLI commands to generate the TargetRG JSON file 
