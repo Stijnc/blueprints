@@ -7,10 +7,9 @@ IF "%~1"=="" (
     )
 
 	
-:: Work
-:: ToDo ADD CLI Commands
-:: ToDo Create Python ValidateRG
-:: ToDo Add Python ValidageRG 
+:: Backlog
+:: - Review 
+
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
 :: is active/default
