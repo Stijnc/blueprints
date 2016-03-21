@@ -17,7 +17,6 @@ args = parser.parse_args()
 print("\nRunning Validate Resource Group against desired state.")
 
 
-
 # Retrieve JSON
 with open(args.TargetRG_JSON) as data_file: 
 	targetRGJSON = json.load(data_file)
@@ -27,6 +26,13 @@ with open(args.DesiredState_JSON) as data_file:
 	
 # Input an Array
 # Each array entry is a Dict.
+
+def is_number(s):
+	try:
+		float(s)
+		return True
+	except ValueError:
+		return False
 
 # Go through JSON Dictionary and return a Dictionary with a count for each deployed asset.
 def getAssetCount(data):
@@ -55,7 +61,11 @@ def compareAssets(refDict, tarDict):
 			if(refDict[x] != tarDict[x]):
 				tmpDict[x]= refDict[x] - tarDict[x]
 		else:
-			tmpDict[x] = "missing"
+			tmpDict[x] = "is missing!"
+			
+	for y in keysTar:
+		if (y not in refDict):
+			tmpDict[y] = "asset is not present in desired state!"
 	return tmpDict
 	
 # Generate a report of the findings
@@ -63,13 +73,14 @@ def generateReport(reportDict, refDict):
 	if (len(reportDict) > 0):
 		print("Failed: Deployments do not match:")
 		for k,v  in reportDict.items():
-			if (reportDict[k] == "missing"):
-				print("\t",k,"is",v)
-			else:
+			#print ("type:reportDict:",type(reportDict[k]))
+			if (is_number(reportDict[k])):
 				if (v > 0):
 					print("\t",k,"is missing",v,"deployments.")
 				else: 
 					print("\t",k,"has",abs(v),"extra deployments.")
+			else:
+				print("\t",k,v)
 	else:
 		print("Passed: Deployment matches desired state!")
 		for k,v in refDict.items():
