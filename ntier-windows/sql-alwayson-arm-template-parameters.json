@@ -1,0 +1,69 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"location": {
+			"value": "West US"
+		},
+		"adminUsername": {
+			"value": "testuser"
+		},
+		"adminPassword": {
+			"value": "AweS0me@PW"
+		},
+		"virtualNetworkName": {
+			"value": "app2Vnet"
+		},
+		"adVmSize": {
+			"value": "Standard_D2"
+		},
+		"sqlVmSize": {
+			"value": "Standard_DS2"
+		},
+		"witnessVmSize": {
+			"value": "Standard_DS1"
+		},
+		"sqlServerServiceAccountUserName": {
+			"value": "sqlservice"
+		},
+		"sqlServerServiceAccountPassword": {
+			"value": "AweS0me@PW"
+		},
+		"dcStorageAccountType": {
+			"value": "Standard_LRS"
+		},
+		"sqlStorageAccountType": {
+			"value": "Premium_LRS"
+		},
+		"storageAccountNamePrefix": {
+			"value": "app2dev"
+		},
+		"numberOfSqlVMDisks": {
+			"value": "1"
+		},
+		"workloadType": {
+			"value": "General"
+		},
+		"sqlAOAGName": {
+			"value": "Contoso-ag"
+		},
+		"sqlAOListenerName": {
+			"value": "Contoso-listener"
+		},
+		"sqlAOListenerPort": {
+			"value": "1433"
+		},
+		"sqlServerVersion": {
+			"value": "SQL2014-WS2012R2"
+		},
+		"domainName": {
+			"value": "contoso.com"
+		},
+		"autoPatchingDay": {
+			"value": "Sunday"
+		},
+		"autoPatchingStartHour": {
+			"value": "2"
+		}
+	}
+}
