@@ -9,22 +9,17 @@ fi
 
 
 LOCATION=eastus2
-APP_NAME=app1
+APP_NAME=app101
 ENVIRONMENT=dev
-USERNAME=""
-PASSWORD=""
 
 read -p "Enter username "  USERNAME
-read -s -p "Enter password " PASSWORD
-
+read -p "Enter public Key file " PUBLICKEYFILE
  
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
 SUBSCRIPTION=$1
 
-
-
-VM_NAME=$APP_NAME-vm0
+VM_NAME="${APP_NAME}-vm0"
 #echo $VM_NAME
 
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
@@ -94,7 +89,7 @@ azure vm create --name $VM_NAME --os-type Linux \
 --image-urn  $LINUX_BASE_IMAGE --vm-size $VM_SIZE \
 --vnet-subnet-name $SUBNET_NAME --vnet-name $VNET_NAME \
 --nic-name $NIC_NAME --storage-account-name $VHD_STORAGE \
---os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD \
+--os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME --ssh-publickey-file $PUBLICKEYFILE \
 --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" $POSTFIX
 
  

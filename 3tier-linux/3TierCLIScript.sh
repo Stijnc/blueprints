@@ -43,7 +43,7 @@ CreateVm()
   azure vm create --name $VM_NAME --os-type Linux \
   --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME \
   --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE \
-  --os-disk-vhd "${VM_NAME%}-osdisk.vhd" --admin-username $USERNAME --admin-password $PASSWORD \
+  --os-disk-vhd "${VM_NAME%}-osdisk.vhd" --admin-username $USERNAME  --ssh-publickey-file $PUBLICKEYFILE \
   --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
   --availset-name $AVAILSET_TIER_NAME --location $LOCATION $POSTFIX
 
@@ -150,11 +150,9 @@ LOCATION=eastus2
 APP_NAME=app500
 ENVIRONMENT=dev
 
-USERNAME=""
-PASSWORD=""
-
 read -p "Enter username "  USERNAME
-read -s -p "Enter password " PASSWORD
+read -p "Enter public Key file " PUBLICKEYFILE
+
 
 NUM_VM_INSTANCES_WEB_TIER=3
 NUM_VM_INSTANCES_BIZ_TIER=3
