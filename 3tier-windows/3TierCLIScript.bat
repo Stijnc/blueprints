@@ -1,9 +1,9 @@
 ECHO OFF
 SETLOCAL
 
-IF "%2"=="" (
-    ECHO Usage: %0 subscription-id admin-address-prefix-CIDR-format 
-    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm
+IF "%3"=="" (
+    ECHO Usage: %0 subscription-id admin-address-prefix-CIDR-format admin-password 
+    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm pwd
     EXIT /B
     )
 
@@ -22,7 +22,7 @@ SET APP_NAME=app1
 SET LOCATION=centralus
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
-SET PASSWORD=AweS0me@PW
+SET PASSWORD=%3
 
 SET NUM_VM_INSTANCES_WEB_TIER=3
 SET NUM_VM_INSTANCES_BIZ_TIER=3

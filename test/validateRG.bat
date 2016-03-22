@@ -1,4 +1,4 @@
-ECHO OFF
+@ECHO OFF
 SETLOCAL
 
 IF "%~1"=="" (
@@ -7,10 +7,9 @@ IF "%~1"=="" (
     )
 
 	
-:: Work
-:: ToDo ADD CLI Commands
-:: ToDo Create Python ValidateRG
-:: ToDo Add Python ValidageRG 
+:: Backlog
+:: - Review 
+
 
 :: Explicitly set the subscription to avoid confusion as to which subscription
 :: is active/default
@@ -18,9 +17,9 @@ SET SUBSCRIPTION=%1
 SET TARGETRG=%2
 SET DSRG=%3
 
-ECHO %SUBSCRIPTION%
-ECHO %TARGETRG%
-ECHO %DSRG%
+ECHO Using Subscription: %SUBSCRIPTION%
+ECHO Target Resource Group: %TARGETRG%
+ECHO Desired State Resource Group: %DSRG%
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Call CLI commands to generate the TargetRG JSON file 

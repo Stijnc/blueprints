@@ -36,7 +36,7 @@ create_vm()
   --vnet-subnet-name $SUBNET_NAME --nic-name $NIC_NAME \
   --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE \
   --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME \
-  --admin-password $PASSWORD --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
+  --ssh-publickey-file $PUBLICKEYFILE --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
   --availset-name $AVAILSET_NAME --location $LOCATION $POSTFIX
 
   #Attach a data disk
@@ -54,8 +54,10 @@ fi
 LOCATION=eastus2
 APP_NAME=app2
 ENVIRONMENT=dev
-USERNAME=administrator1
-PASSWORD="AweS0me@PW"
+
+read -p "Enter username "  USERNAME
+read -p "Enter public Key file " PUBLICKEYFILE
+
 NUM_VM_INSTANCES=2
 
 # Explicitly set the subscription to avoid confusion as to which subscription
