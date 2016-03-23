@@ -88,7 +88,7 @@ CALL azure network public-ip create --name %JUMPBOX_PUBLIC_IP_NAME% --location %
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the web tier
-:: Web tier has publicly IP, load balancer, availability set, and three VMs
+:: Web tier has a public IP, load balancer, availability set, and three VMs
 
 SET LB_NAME=%APP_NAME%-web-lb
 SET SUBNET_NAME=%APP_NAME%-web-subnet
