@@ -96,8 +96,7 @@ CALL azure network lb rule create --name %LB_NAME%-rule-http --protocol tcp ^
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create VMs and per-VM resources
-SET /a END_INDEX=NUM_VM_INSTANCES-1
-FOR /L %%I IN (0,1,%END_INDEX%) DO CALL :CreateVM %%I
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES%) DO CALL :CreateVM %%I
 
 GOTO :eof
 
@@ -109,9 +108,9 @@ GOTO :eof
 ECHO Creating VM %1
 
 SET VM_NAME=%APP_NAME%-vm%1
-SET NIC_NAME=%VM_NAME%-0nic
-SET VHD_STORAGE=%VM_NAME:-=%st0
-SET /a RDP_PORT=50001 + %1
+SET NIC_NAME=%VM_NAME%-nic1
+SET VHD_STORAGE=%VM_NAME:-=%st1
+SET /a RDP_PORT=50000 + %1
 
 :: Create NIC for VM1
 CALL azure network nic create --name %NIC_NAME% --subnet-name %SUBNET_NAME% ^
