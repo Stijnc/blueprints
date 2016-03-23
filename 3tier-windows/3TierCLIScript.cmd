@@ -117,7 +117,7 @@ FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_WEB_TIER%) DO CALL :CreateVM %%I web %SUBNE
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the business tier
-:: Business tier has an internal load balancer, availabilty set, and three VMs
+:: Business tier has an internal load balancer, availability set, and three VMs
 
 SET LB_NAME=%APP_NAME%-biz-lb
 SET SUBNET_NAME=%APP_NAME%-biz-subnet
