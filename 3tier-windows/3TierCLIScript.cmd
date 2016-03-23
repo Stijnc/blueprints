@@ -2,7 +2,7 @@
 SETLOCAL
 
 IF "%3"=="" (
-    ECHO Usage: %0 subscription-id admin-address-prefix-CIDR-format admin-password
+    ECHO Usage: %0 subscription-id admin-address-whitelist-CIDR-format admin-password
     ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm pwd
     EXIT /B
     )
@@ -88,10 +88,12 @@ CALL azure network public-ip create --name %JUMPBOX_PUBLIC_IP_NAME% --location %
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the web tier
+:: Web tier has publicly IP, load balancer, availability set, and three VMs
 
 SET LB_NAME=%APP_NAME%-web-lb
 SET SUBNET_NAME=%APP_NAME%-web-subnet
 SET AVAILSET_NAME=%APP_NAME%-web-as
+SET USING_AVAILSET=true
 
 :: Create web tier (public) load balancer
 CALL azure network lb create --name %LB_NAME% --location %LOCATION% %POSTFIX%
@@ -110,15 +112,17 @@ CALL azure network lb frontend-ip create --name %LB_NAME%-frontend% --lb-name ^
 CALL :CreateCommonLBResources %LB_NAME%
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_WEB_TIER%) DO CALL :CreateVM %%I web %SUBNET_NAME% true %LB_NAME%
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_WEB_TIER%) DO CALL :CreateVM %%I web %SUBNET_NAME% %USING_AVAILSET% %LB_NAME%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the business tier
+:: Business tier has an internal load balancer, availabilty set, and three VMs
 
 SET LB_NAME=%APP_NAME%-biz-lb
 SET SUBNET_NAME=%APP_NAME%-biz-subnet
 SET AVAILSET_NAME=%APP_NAME%-biz-as
+SET USING_AVAILSET=true
 
 :: Create the business tier internal load balancer
 CALL azure network lb create --name %LB_NAME% --location %LOCATION% %POSTFIX%
@@ -138,33 +142,41 @@ CALL azure network lb frontend-ip create --name %LB_NAME%-frontend --lb-name ^
 CALL :CreateCommonLBResources %LB_NAME%
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_BIZ_TIER%) DO CALL :CreateVM %%I biz %SUBNET_NAME% true %LB_NAME%
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_BIZ_TIER%) DO CALL :CreateVM %%I biz %SUBNET_NAME% %USING_AVAILSET% %LB_NAME%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the database tier
+:: Database tier has no load balancer, an availability set, and two VMs.
 
 SET SUBNET_NAME=%APP_NAME%-db-subnet
+SET AVAILSET_NAME=%APP_NAME%-db-as
+SET USING_AVAILSET=true
 
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   %DB_SUBNET_IP_RANGE% --name %SUBNET_NAME% %POSTFIX%
 
+  :: Create the availability sets
+  CALL azure availset create --name %AVAILSET_NAME% --location %LOCATION% %POSTFIX%
+
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_DB_TIER%) DO CALL :CreateVM %%I db %SUBNET_NAME% true
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_DB_TIER%) DO CALL :CreateVM %%I db %SUBNET_NAME% %USING_AVAILSET%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Create the management subnet
+:: Management subnet has no load balancer, no availability set, and one VM (jumpbox)
 
 SET SUBNET_NAME=%APP_NAME%-manage-subnet
+SET USING_AVAILSET=false
 
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   %MANAGE_SUBNET_IP_RANGE% --name %SUBNET_NAME% %POSTFIX%
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_MANAGE_TIER%) DO CALL :CreateVM %%I manage %SUBNET_NAME% false
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_MANAGE_TIER%) DO CALL :CreateVM %%I manage %SUBNET_NAME% %USING_AVAILSET%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
