@@ -1,10 +1,8 @@
-:: This script was written for Azure CLI version 0.9.16 (pre-release)
-
 ECHO OFF
 SETLOCAL
 
-IF "%~1"=="" (
-    ECHO Usage: %0 subscription-id
+IF "%~2"=="" (
+    ECHO Usage: %0 subscription-id admin-password
     EXIT /B
     )
 
@@ -15,7 +13,7 @@ SET LOCATION=eastus2
 SET APP_NAME=app1
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
-SET PASSWORD=AweS0me@PW
+SET PASSWORD=%2
 
 SET NUM_VM_INSTANCES=2
 
@@ -110,9 +108,9 @@ GOTO :eof
 ECHO Creating VM %1
 
 SET VM_NAME=%APP_NAME%-vm%1
-SET NIC_NAME=%VM_NAME%-0nic
-SET VHD_STORAGE=%VM_NAME:-=%st0
-SET /a RDP_PORT=50001 + %1
+SET NIC_NAME=%VM_NAME%-nic1
+SET VHD_STORAGE=%VM_NAME:-=%st1
+SET /a RDP_PORT=50000 + %1
 
 :: Create NIC for VM1
 CALL azure network nic create --name %NIC_NAME% --subnet-name %SUBNET_NAME% ^
