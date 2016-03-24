@@ -9,16 +9,16 @@
 #####################################################################
 
 # Set up variables to build out the naming conventions for deploying
-# the cluster
+# the cluster  
 LOCATION=eastus2
 APP_NAME=profx
 ENVIRONMENT=prod
 USERNAME=testuser
-PASSWORD="AweS0me@PW"
+PASSWORD="testpass"
 
 # Set up the tags to associate with items in the application
 TAG_BILLTO="InternalApp-ProFX-12345"
-TAGS="billTo=${TAG_BILLTO}"
+TAGS="bill-to=${TAG_BILLTO}"
 
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
@@ -55,7 +55,7 @@ create_vm ()
     diagnostics_storage=$7
 
 	# Create the network interface card for this VM
-	azure network nic create --name "${vm_name}-0nic" --subnet-name ${subnet_name} --subnet-vnet-name ${vnet_name} \
+	azure network nic create --name "${vm_name}-nic-0" --subnet-name ${subnet_name} --subnet-vnet-name ${vnet_name} \
         --tags="${TAGS}" ${POSTFIX}
 
 	# Create the storage account for this vm's disks (premium locally redundant storage -> PLRS)
@@ -68,7 +68,7 @@ create_vm ()
     diag_blob="https://${diagnostics_storage}.blob.core.windows.net/"
 
     # Create the VM
-    azure vm create --name ${vm_name} --nic-name "${vm_name}-0nic" --os-type ${os_type} \
+    azure vm create --name ${vm_name} --nic-name "${vm_name}-nic-0" --os-type ${os_type} \
         --image-urn ${vhd_path} --vm-size ${vm_size} --vnet-name ${vnet_name} --vnet-subnet-name ${subnet_name} \
         --storage-account-name "${storage_account_name}" --storage-account-container-name vhds --os-disk-vhd "${vm_name}-osdisk.vhd" \
         --admin-username "${USERNAME}" --admin-password "${PASSWORD}" \
@@ -86,7 +86,6 @@ azure group create --name "${RESOURCE_GROUP}" --location "${LOCATION}" --tags "$
 
 # Step 3 - create the networks (VNet and subnets)
 azure network vnet create --name "${VNET_NAME}" --address-prefixes="10.0.0.0/8" --tags "${TAGS}" ${POSTFIX}
-# TODO - does subnet support tagging?
 azure network vnet subnet create --name gateway-subnet --vnet-name "${VNET_NAME}" --address-prefix="10.0.1.0/24" --resource-group "${RESOURCE_GROUP}" --subscription ${SUBSCRIPTION}
 azure network vnet subnet create --name es-master-subnet --vnet-name "${VNET_NAME}" --address-prefix="10.0.2.0/24" --resource-group "${RESOURCE_GROUP}" --subscription ${SUBSCRIPTION}
 azure network vnet subnet create --name es-data-subnet --vnet-name "${VNET_NAME}" --address-prefix="10.0.3.0/24" --resource-group "${RESOURCE_GROUP}" --subscription ${SUBSCRIPTION}
@@ -120,3 +119,4 @@ done
 # Step 6.3 - Create the SQL VMs
 create_vm "${APP_NAME}-sql0" "${APP_NAME}-vnet" "sql-subnet" "Windows" "${WINDOWS_BASE_IMAGE}" "Standard_DS1" "${diagnostics_storage_account}"
 create_vm "${APP_NAME}-sql1" "${APP_NAME}-vnet" "sql-subnet" "Windows" "${WINDOWS_BASE_IMAGE}" "Standard_DS1" "${diagnostics_storage_account}"
+```
