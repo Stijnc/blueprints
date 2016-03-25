@@ -12,9 +12,9 @@ CreateVm()
   LB_NAME=$5
   AVAILSET_NAME="${APP_NAME}-${TIER_NAME}-as"
   VM_NAME="${APP_NAME}-${TIER_NAME}-vm${1}"
-  NIC_NAME="${VM_NAME}-nic${1}"
-  VHD_STORAGE="${VM_NAME}//-}diag"
-  
+  NIC_NAME="${VM_NAME}-nic1"
+  VHD_STORAGE="${VM_NAME}//-}st1"
+
 
   # Create NIC for VM
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME \
@@ -137,6 +137,8 @@ REMOTE_ACCESS_PORT=22
 # azure vm image list eastus2 suse
 # READ HAT
 # azure vm image list eastus2 redhat
+# CENTOS
+# azure vm image list eastus2 openlogic
 
 LINUX_BASE_IMAGE=canonical:ubuntuserver:14.04.3-LTS:14.04.201601190
 
