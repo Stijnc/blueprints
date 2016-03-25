@@ -12,9 +12,9 @@ CreateVm()
   LB_NAME=$5
   AVAILSET_NAME="${APP_NAME}-${TIER_NAME}-as"
   VM_NAME="${APP_NAME}-${TIER_NAME}-vm${1}"
-  NIC_NAME="${VM_NAME}-nic1"
-  VHD_STORAGE=%VM_NAME:-=%st1
-  RDP_PORT=$((50001 + %1))
+  NIC_NAME="${VM_NAME}-nic${1}"
+  VHD_STORAGE="${VM_NAME}//-}diag"
+  
 
   # Create NIC for VM
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME \
