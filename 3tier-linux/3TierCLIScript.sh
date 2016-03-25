@@ -263,7 +263,6 @@ azure network vnet subnet create --vnet-name $VNET_NAME --address-prefix \
 azure availset create --name $AVAILSET_NAME --location $LOCATION $POSTFIX
 
 # Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_DB_TIER%) DO CALL :CreateVM %%I db %SUBNET_NAME% %USING_AVAILSET%
 
 for ((i=1; i<=$NUM_VM_INSTANCES_BIZ_TIER ; i++))
   do
@@ -283,7 +282,7 @@ azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix \
   $MANAGE_SUBNET_IP_RANGE --name $SUBNET_NAME $POSTFIX
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_MANAGE_TIER%) DO CALL :CreateVM %%I manage %SUBNET_NAME% %USING_AVAILSET%
+
 
 for ((i=1; i<=$NUM_VM_INSTANCES_MANAGE_TIER ; i++))
   do
