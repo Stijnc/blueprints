@@ -281,7 +281,7 @@ USING_AVAILSET=false
 azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix \
   $MANAGE_SUBNET_IP_RANGE --name $SUBNET_NAME $POSTFIX
 
-:: Create VMs and per-VM resources
+# Create VMs and per-VM resources
 
 
 for ((i=1; i<=$NUM_VM_INSTANCES_MANAGE_TIER ; i++))
@@ -324,9 +324,9 @@ azure network nsg create --name $DB_TIER_NSG_NAME --location $LOCATION% $POSTFIX
 
 # Allow inbound traffic from business tier subnet to the DB tier
 azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biz-allow \
-	--access Allow --protocol * --direction Inbound --priority 100 \
+	--access Allow --protocol "*" --direction Inbound --priority 100 \
 	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range "*" \
-	--destination-address-prefix * --destination-port-range "*" $POSTFIX
+	--destination-address-prefix "*" --destination-port-range "*" $POSTFIX
 
 # Allow inbound remote access traffic from management subnet
 azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name manage-rdp-allow \
