@@ -51,7 +51,7 @@ CreateVm()
       $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username \
       $USERNAME --ssh-publickey-file $PASSWORD--boot-diagnostics-storage-uri \
       "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
-      --location $LOCATION $POSTFIX  
+      --location $LOCATION $POSTFIX
   fi
    
   # Attach a data disk
@@ -77,7 +77,7 @@ CreateCommonLBResources()
   --port 80 --interval 5 --count 2 --protocol http --path "/" $POSTFIX
 
   # Create a load balancer rule for HTTP
-  azure network lb rule create --name %LB_NAME%-rule-http --protocol tcp \
+  azure network lb rule create --name $LB_NAME -rule-http --protocol tcp \
   --lb-name $LB_NAME --frontend-port 80 --backend-port 80 --frontend-ip-name \
   $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
 
@@ -151,7 +151,7 @@ VM_SIZE=Standard_DS1
 
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
 VNET_NAME="${APP_NAME}-vnet"
-PUBLIC_IP_NAME="${APP_NAME%}-pip"
+PUBLIC_IP_NAME="${APP_NAME}-pip"
 DIAGNOSTICS_STORAGE="${APP_NAME//-}diag" 
 JUMPBOX_PUBLIC_IP_NAME="${APP_NAME}-jumpbox-pip"
 JUMPBOX_NIC_NAME="${APP_NAME}-manage-vm1-nic1"
@@ -280,7 +280,7 @@ SUBNET_NAME="${APP_NAME}-manage-subnet"
 USING_AVAILSET=false
 
 # Create the subnet
-azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix \
+azure network vnet subnet create --vnet-name $VNET_NAME --address-prefix \
   $MANAGE_SUBNET_IP_RANGE --name $SUBNET_NAME $POSTFIX
 
 # Create VMs and per-VM resources
@@ -303,7 +303,7 @@ for ((i=1; i<=$NUM_VM_INSTANCES_MANAGE_TIER ; i++))
 
 MANAGE_NSG_NAME="${APP_NAME}-manage-nsg"
 
-azure network nsg create --name $MANAGE_NSG_NAME --location $LOCATION% $POSTFIX
+azure network nsg create --name $MANAGE_NSG_NAME --location $LOCATION $POSTFIX
 
 azure network nsg rule create --nsg-name $MANAGE_NSG_NAME --name admin-ssh-allow \
 	--access Allow --protocol Tcp --direction Inbound --priority 100 \
@@ -322,12 +322,12 @@ azure network nic set --name $JUMPBOX_NIC_NAME --public-ip-name $JUMPBOX_PUBLIC_
 
 DB_TIER_NSG_NAME="${APP_NAME}-db-nsg"
 
-azure network nsg create --name $DB_TIER_NSG_NAME --location $LOCATION% $POSTFIX
+azure network nsg create --name $DB_TIER_NSG_NAME --location $LOCATION $POSTFIX
 
 # Allow inbound traffic from business tier subnet to the DB tier
-azure network nsg rule create --nsg-name %DB_TIER_NSG_NAME% --name biz-allow \
+azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name biz-allow \
 	--access Allow --protocol "*" --direction Inbound --priority 100 \
-	--source-address-prefix %BIZ_SUBNET_IP_RANGE% --source-port-range "*" \
+	--source-address-prefix $BIZ_SUBNET_IP_RANGE --source-port-range "*" \
 	--destination-address-prefix "*" --destination-port-range "*" $POSTFIX
 
 # Allow inbound remote access traffic from management subnet
