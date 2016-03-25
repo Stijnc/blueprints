@@ -14,7 +14,7 @@ LOCATION=eastus2
 APP_NAME=profx
 ENVIRONMENT=prod
 USERNAME=testuser
-PASSWORD="testpass"
+PASSWORD="T12esTpass!@#"
 
 # Set up the tags to associate with items in the application
 TAG_BILLTO="InternalApp-ProFX-12345"
@@ -119,4 +119,3 @@ done
 # Step 6.3 - Create the SQL VMs
 create_vm "${APP_NAME}-sql0" "${APP_NAME}-vnet" "sql-subnet" "Windows" "${WINDOWS_BASE_IMAGE}" "Standard_DS1" "${diagnostics_storage_account}"
 create_vm "${APP_NAME}-sql1" "${APP_NAME}-vnet" "sql-subnet" "Windows" "${WINDOWS_BASE_IMAGE}" "Standard_DS1" "${diagnostics_storage_account}"
-```
