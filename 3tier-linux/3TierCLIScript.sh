@@ -13,7 +13,7 @@ CreateVm()
   AVAILSET_NAME="${APP_NAME}-${TIER_NAME}-as"
   VM_NAME="${APP_NAME}-${TIER_NAME}-vm${1}"
   NIC_NAME="${VM_NAME}-nic1"
-  VHD_STORAGE="${VM_NAME}//-}st1"
+  VHD_STORAGE="${VM_NAME//-}st1"
 
 
   # Create NIC for VM
@@ -77,10 +77,12 @@ CreateCommonLBResources()
   --port 80 --interval 5 --count 2 --protocol http --path "/" $POSTFIX
 
   # Create a load balancer rule for HTTP
-  azure network lb rule create --name $LB_NAME -rule-http --protocol tcp \
+  azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp \
   --lb-name $LB_NAME --frontend-port 80 --backend-port 80 --frontend-ip-name \
   $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
 
+ 
+  
 }
 
 # 3 paramaters are expected
@@ -106,7 +108,7 @@ PASSWORD=$3
 # The APP_NAME variable must not exceed 4 characters in size.
 # If it does the 15 character size limitation of the VM name may be exceeded.
 
-APP_NAME=app1
+APP_NAME=app105
 LOCATION=centralus
 ENVIRONMENT=dev
 USERNAME=testuser
@@ -193,7 +195,7 @@ AVAILSET_NAME="${APP_NAME}-web-as"
 USING_AVAILSET=true
 
 # Create web tier (public) load balancer
-network lb create --name $LB_NAME --location $LOCATION $POSTFIX
+azure network lb create --name $LB_NAME --location $LOCATION $POSTFIX
 
 # Create the subnet
 azure network vnet subnet create --vnet-name $VNET_NAME --address-prefix \
@@ -213,7 +215,7 @@ for ((i=1; i<=$NUM_VM_INSTANCES_WEB_TIER ; i++))
   do
     CreateVm $i web $SUBNET_NAME $USING_AVAILSET $LB_NAME
   done
-}
+
 
 ###########################################################################
 
@@ -247,7 +249,7 @@ for ((i=1; i<=$NUM_VM_INSTANCES_BIZ_TIER ; i++))
   do
     CreateVm $i biz $SUBNET_NAME $USING_AVAILSET $LB_NAME
   done
-}
+
 
 ##################################################################################
 # Create the database tier
@@ -266,11 +268,11 @@ azure availset create --name $AVAILSET_NAME --location $LOCATION $POSTFIX
 
 # Create VMs and per-VM resources
 
-for ((i=1; i<=$NUM_VM_INSTANCES_BIZ_TIER ; i++))
+for ((i=1; i<=$NUM_VM_INSTANCES_DB_TIER ; i++))
   do
-    CreateVm $i biz $SUBNET_NAME $USING_AVAILSET 
+    CreateVm $i db $SUBNET_NAME $USING_AVAILSET 
   done
-}
+
 
 #############################################################################################
 # Create the management subnet
@@ -290,7 +292,7 @@ for ((i=1; i<=$NUM_VM_INSTANCES_MANAGE_TIER ; i++))
   do
     CreateVm $i manage $SUBNET_NAME $USING_AVAILSET 
   done
-}
+
 
 
 #############################################
