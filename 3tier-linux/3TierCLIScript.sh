@@ -20,15 +20,15 @@ CreateVm()
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME \
   --subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
   
-  
-  if [ -n $LB_NAME ]
+  if [ ! -z $LB_NAME ]
   then
+  
      # Add NIC to back-end address pool
      LB_BACKEND_NAME="${LB_NAME}-backend-pool"
      azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME \
 	  --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
   fi
-  
+
   # Create the storage account for the OS VHD
   azure storage account create --type PLRS --location $LOCATION \
     $VHD_STORAGE $POSTFIX
@@ -41,7 +41,7 @@ CreateVm()
 	$LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME \
 	--nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name \
 	$VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username \
-	$USERNAME --ssh-publickey-file $PASSWORD --boot-diagnostics-storage-uri \
+	$USERNAME --ssh-publickey-file $PUBLICKEYFILE --boot-diagnostics-storage-uri \
         "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" --availset-name \
         $AVAILSET_NAME --location $LOCATION $POSTFIX
   else
@@ -49,7 +49,7 @@ CreateVm()
       $LINUX_BASE_IMAGE --vm-size $VM_SIZE --vnet-subnet-name $SUBNET_NAME \
       --nic-name $NIC_NAME --vnet-name $VNET_NAME --storage-account-name \
       $VHD_STORAGE --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username \
-      $USERNAME --ssh-publickey-file $PASSWORD--boot-diagnostics-storage-uri \
+      $USERNAME --ssh-publickey-file $PUBLICKEYFILE --boot-diagnostics-storage-uri \
       "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
       --location $LOCATION $POSTFIX
   fi
@@ -80,9 +80,7 @@ CreateCommonLBResources()
   azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp \
   --lb-name $LB_NAME --frontend-port 80 --backend-port 80 --frontend-ip-name \
   $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
-
  
-  
 }
 
 # 3 paramaters are expected
@@ -95,12 +93,19 @@ then
 	exit	
 fi
 
+if [ ! -f $3  ] 
+then
+	echo "Public Key file ${3} does not exist. please generate it"
+	echo "ssh-keygen -t rsa -b 2048" 
+	exit	
+fi
+
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
 
 SUBSCRIPTION=$1
 ADMIN_ADDRESS_PREFIX=$2
-PASSWORD=$3
+PUBLICKEYFILE=$3
 
 # Set up variables to build out the naming conventions for deploying
 # the cluster
@@ -108,7 +113,7 @@ PASSWORD=$3
 # The APP_NAME variable must not exceed 4 characters in size.
 # If it does the 15 character size limitation of the VM name may be exceeded.
 
-APP_NAME=app105
+APP_NAME=app108
 LOCATION=centralus
 ENVIRONMENT=dev
 USERNAME=testuser
@@ -132,7 +137,7 @@ BIZ_ILB_IP=10.0.1.250
 
 REMOTE_ACCESS_PORT=22
 
-# For UBUNTU,OPENSUSE,RHEL use the following command to get the list of URNs:
+# For UBUNTU,OPENSUSE,RHEL,CENTOS use the following command to get the list of URNs:
 # UBUNTU
 # azure vm image list eastus2 canonical
 # SUSE
@@ -333,7 +338,7 @@ azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name biz-allow \
 	--destination-address-prefix "*" --destination-port-range "*" $POSTFIX
 
 # Allow inbound remote access traffic from management subnet
-azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name manage-rdp-allow \
+azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name manage-ssh-allow \
 	--access Allow --protocol Tcp --direction Inbound --priority 200 \
 	--source-address-prefix $MANAGE_SUBNET_IP_RANGE --source-port-range "*" \
 	--destination-address-prefix "*" --destination-port-range $REMOTE_ACCESS_PORT $POSTFIX
