@@ -1,0 +1,96 @@
+{
+  "name": "multi-vm-desiredstate",
+  "resources": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Compute/availabilitySets/lbapp1-as",
+      "name": "lbapp1-as",
+      "type": "availabilitySets",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Compute/virtualMachines/lbapp1-vm1",
+      "name": "lbapp1-vm1",
+      "type": "virtualMachines",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Compute/virtualMachines/lbapp1-vm1/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Compute/virtualMachines/lbapp1-vm2",
+      "name": "lbapp1-vm2",
+      "type": "virtualMachines",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Compute/virtualMachines/lbapp1-vm2/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Network/loadBalancers/lbapp1-lb",
+      "name": "lbapp1-lb",
+      "type": "loadBalancers",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Network/networkInterfaces/lbapp1-vm1-nic1",
+      "name": "lbapp1-vm1-nic1",
+      "type": "networkInterfaces",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Network/networkInterfaces/lbapp1-vm2-nic1",
+      "name": "lbapp1-vm2-nic1",
+      "type": "networkInterfaces",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Network/publicIPAddresses/lbapp1-pip",
+      "name": "lbapp1-pip",
+      "type": "publicIPAddresses",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Network/virtualNetworks/lbapp1-vnet",
+      "name": "lbapp1-vnet",
+      "type": "virtualNetworks",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Storage/storageAccounts/lbapp1diag",
+      "name": "lbapp1diag",
+      "type": "storageAccounts",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Storage/storageAccounts/lbapp1vm1st1",
+      "name": "lbapp1vm1st1",
+      "type": "storageAccounts",
+      "location": "eastus2",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/lbapp1-test-rg/providers/Microsoft.Storage/storageAccounts/lbapp1vm2st1",
+      "name": "lbapp1vm2st1",
+      "type": "storageAccounts",
+      "location": "eastus2",
+      "tags": null
+    }
+  ]
+}

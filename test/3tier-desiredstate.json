@@ -1,0 +1,334 @@
+{
+  "name": "Windows-3tier-desiredstate",
+  "resources": [
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/availabilitySets/yy3t-biz-as",
+      "name": "yy3t-biz-as",
+      "type": "availabilitySets",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/availabilitySets/yy3t-db-as",
+      "name": "yy3t-db-as",
+      "type": "availabilitySets",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/availabilitySets/yy3t-web-as",
+      "name": "yy3t-web-as",
+      "type": "availabilitySets",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm1",
+      "name": "yy3t-biz-vm1",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm1/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm2",
+      "name": "yy3t-biz-vm2",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm2/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm3",
+      "name": "yy3t-biz-vm3",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-biz-vm3/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-db-vm1",
+      "name": "yy3t-db-vm1",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-db-vm1/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-db-vm2",
+      "name": "yy3t-db-vm2",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-db-vm2/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-manage-vm1",
+      "name": "yy3t-manage-vm1",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-manage-vm1/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm1",
+      "name": "yy3t-web-vm1",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm1/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm2",
+      "name": "yy3t-web-vm2",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm2/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm3",
+      "name": "yy3t-web-vm3",
+      "type": "virtualMachines",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Compute/virtualMachines/yy3t-web-vm3/extensions/BGInfo",
+      "name": "BGInfo",
+      "type": "extensions",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/loadBalancers/yy3t-biz-lb",
+      "name": "yy3t-biz-lb",
+      "type": "loadBalancers",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/loadBalancers/yy3t-web-lb",
+      "name": "yy3t-web-lb",
+      "type": "loadBalancers",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-biz-vm1-nic1",
+      "name": "yy3t-biz-vm1-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-biz-vm2-nic1",
+      "name": "yy3t-biz-vm2-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-biz-vm3-nic1",
+      "name": "yy3t-biz-vm3-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-db-vm1-nic1",
+      "name": "yy3t-db-vm1-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-db-vm2-nic1",
+      "name": "yy3t-db-vm2-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-manage-vm1-nic1",
+      "name": "yy3t-manage-vm1-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-web-vm1-nic1",
+      "name": "yy3t-web-vm1-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-web-vm2-nic1",
+      "name": "yy3t-web-vm2-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkInterfaces/yy3t-web-vm3-nic1",
+      "name": "yy3t-web-vm3-nic1",
+      "type": "networkInterfaces",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkSecurityGroups/yy3t-db-nsg",
+      "name": "yy3t-db-nsg",
+      "type": "networkSecurityGroups",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/networkSecurityGroups/yy3t-manage-nsg",
+      "name": "yy3t-manage-nsg",
+      "type": "networkSecurityGroups",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/publicIPAddresses/yy3t-jumpbox-pip",
+      "name": "yy3t-jumpbox-pip",
+      "type": "publicIPAddresses",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/publicIPAddresses/yy3t-pip",
+      "name": "yy3t-pip",
+      "type": "publicIPAddresses",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Network/virtualNetworks/yy3t-vnet",
+      "name": "yy3t-vnet",
+      "type": "virtualNetworks",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tbizvm1st1",
+      "name": "yy3tbizvm1st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tbizvm2st1",
+      "name": "yy3tbizvm2st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tbizvm3st1",
+      "name": "yy3tbizvm3st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tdbvm1st1",
+      "name": "yy3tdbvm1st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tdbvm2st1",
+      "name": "yy3tdbvm2st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tdiag",
+      "name": "yy3tdiag",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3tmanagevm1st1",
+      "name": "yy3tmanagevm1st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3twebvm1st1",
+      "name": "yy3twebvm1st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3twebvm2st1",
+      "name": "yy3twebvm2st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    },
+    {
+      "id": "/subscriptions/a012a8b0-522a-4f59-81b6-aa0361eb9387/resourceGroups/yy3t-test-rg/providers/Microsoft.Storage/storageAccounts/yy3twebvm3st1",
+      "name": "yy3twebvm3st1",
+      "type": "storageAccounts",
+      "location": "centralus",
+      "tags": null
+    }
+  ]
+}
