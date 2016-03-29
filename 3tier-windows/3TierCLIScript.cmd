@@ -2,7 +2,7 @@
 SETLOCAL
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Set up variables to for deploying resources to Azure.
+:: Set up variables for deploying resources to Azure.
 
 :: The APP_NAME variable must not exceed 4 characters in size.
 :: If it does the 15 character size limitation of the VM name may be exceeded.
