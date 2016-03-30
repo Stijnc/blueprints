@@ -1,21 +1,9 @@
 @ECHO OFF
 SETLOCAL
 
-IF "%3"=="" (
-    ECHO Usage: %0 subscription-id admin-address-whitelist-CIDR-format admin-password
-    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm pwd
-    EXIT /B
-    )
-
-:: Explicitly set the subscription to avoid confusion as to which subscription
-:: is active/default
-
-SET SUBSCRIPTION=%1
-SET ADMIN_ADDRESS_PREFIX=%2
-SET PASSWORD=%3
-
-:: Set up variables to build out the naming conventions for deploying
-:: the cluster
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Set up variables for deploying resources to Azure.
+:: Change these variables for your own deployment
 
 :: The APP_NAME variable must not exceed 4 characters in size.
 :: If it does the 15 character size limitation of the VM name may be exceeded.
@@ -49,6 +37,21 @@ SET WINDOWS_BASE_IMAGE=MicrosoftWindowsServer:WindowsServer:2012-R2-Datacenter:4
 :: To see the VM sizes available in a region:
 :: 	azure vm sizes --location <<location>>
 SET VM_SIZE=Standard_DS1
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+IF "%3"=="" (
+    ECHO Usage: %0 subscription-id admin-address-whitelist-CIDR-format admin-password
+    ECHO   For example: %0 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx nnn.nnn.nnn.nnn/mm pwd
+    EXIT /B
+    )
+
+:: Explicitly set the subscription to avoid confusion as to which subscription
+:: is active/default
+
+SET SUBSCRIPTION=%1
+SET ADMIN_ADDRESS_PREFIX=%2
+SET PASSWORD=%3
 
 :: Set up the names of things using recommended conventions
 SET RESOURCE_GROUP=%APP_NAME%-%ENVIRONMENT%-rg
@@ -238,12 +241,12 @@ GOTO :eof
 
 :CreateCommonLBResources
 
-ECHO Creating resoures for %1
-
 SET LB_NAME=%1
 SET LB_FRONTEND_NAME=%LB_NAME%-frontend
 SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 SET LB_PROBE_NAME=%LB_NAME%-probe
+
+ECHO Creating resources for load balancer: %LB_NAME%
 
 :: Create LB back-end address pool
 CALL azure network lb address-pool create --name %LB_BACKEND_NAME% --lb-name ^
@@ -266,12 +269,13 @@ GOTO :eof
 
 :CreateVm
 
-ECHO Creating VM %1
-
 SET TIER_NAME=%2
 SET SUBNET_NAME=%3
 SET NEEDS_AVAILABILITY_SET=%4
 SET LB_NAME=%5
+
+ECHO Creating VM %1 in the %TIER_NAME% tier, in subnet %SUBNET_NAME%.
+ECHO NEEDS_AVAILABILITY_SET="%NEEDS_AVAILABILITY_SET%" and LB_NAME="%LB_NAME%"
 
 SET AVAILSET_NAME=%APP_NAME%-%TIER_NAME%-as
 SET VM_NAME=%APP_NAME%-%TIER_NAME%-vm%1
