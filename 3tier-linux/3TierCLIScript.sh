@@ -1,11 +1,38 @@
 #!/bin/bash
+############################################################################
+#script for generating infrastructure for 3 tier plus linux VMS of         #
+# user choice. It creates azure resource group, storage accounts for VMS   #
+# vnet, subnets for tiers, load balancer if required and NSG rules         #
+# tags for main variables used                                             #
+# ScriptCommandParameters                                                  #
+# ScriptVars                                                               #
+############################################################################
 
-#define functions
+############################################################################
+# User defined functions for 3tier script                                  #
+# errhandle : handles errors via trap if any exception happens             # 
+# in the cli execution or if the user interrupts with CTRL+C               #
+# allowing for fast interruption                                           #
+# CreateVM: provisions the VMS for the tiers. Parameters: VM Name,Tier name#
+# (web, biz, db, manage) avalability set(true or false) Load balancer name #
+# CreateCommonLBResources:creates the probe and rules for the load balancer#
+############################################################################
+
+# error handling or interruption via ctrl-c.
+# line number and error code of executed command is passed to errhandle function
+
+trap 'errhandle $LINENO $?' SIGINT ERR
+
+errhandle()
+{ 
+  echo "Error or Interruption at line ${1} exit code ${2} "
+  exit ${2}
+}
 
 CreateVm()
-{  
-  echo "Creating VM ${1}"
-  
+{
+  echo "Creating VM ${1} in tier ${2} availability set ${3} lb (empty if none) ${4} "
+
   TIER_NAME=$2
   SUBNET_NAME=$3
   NEEDS_AVAILABILITY_SET=$4
@@ -15,14 +42,13 @@ CreateVm()
   NIC_NAME="${VM_NAME}-nic1"
   VHD_STORAGE="${VM_NAME//-}st1"
 
-
   # Create NIC for VM
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME \
   --subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
-  
+
   if [ ! -z $LB_NAME ]
   then
-  
+
      # Add NIC to back-end address pool
      LB_BACKEND_NAME="${LB_NAME}-backend-pool"
      azure network nic address-pool add --name $NIC_NAME --lb-name $LB_NAME \
@@ -32,9 +58,9 @@ CreateVm()
   # Create the storage account for the OS VHD
   azure storage account create --type PLRS --location $LOCATION \
     $VHD_STORAGE $POSTFIX
-  
+
   # Create the VM
-  
+
   if [ $NEEDS_AVAILABILITY_SET = true ]
   then
       azure vm create --name $VM_NAME --os-type Linux --image-urn \
@@ -53,18 +79,17 @@ CreateVm()
       "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
       --location $LOCATION $POSTFIX
   fi
-   
+
   # Attach a data disk
   azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 --vhd-name \
   "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
-    
-}
 
+}
 
 CreateCommonLBResources()
 {
-  echo "Creating resoures for ${1}"
-  
+  echo "Creating resoures for load balancer ${1}"
+
   LB_NAME=$1
   LB_FRONTEND_NAME="${LB_NAME}-frontend"
   LB_BACKEND_NAME="${LB_NAME}-backend-pool"
@@ -80,29 +105,32 @@ CreateCommonLBResources()
   azure network lb rule create --name "${LB_NAME}-rule-http" --protocol tcp \
   --lb-name $LB_NAME --frontend-port 80 --backend-port 80 --frontend-ip-name \
   $LB_FRONTEND_NAME --probe-name $LB_PROBE_NAME $POSTFIX
- 
+
 }
 
-# 3 paramaters are expected
-# public key file needs to be generates ssh-keygen 
-# it defaults to /home/user/.ssh/id_rsa
+###############################################################################
+############################## End of user defined functions ##################
+###############################################################################
 
-if [ $# -ne 3  ] 
+# 3 paramaters are expected
+# public key file needs to be generates ssh-keygen
+
+if [ $# -ne 3  ]
 then
 	echo  "Usage:  ${0}  subscription-id admin-address-whitelist-CIDR-format public-ssh-key-file"
-	exit	
+	exit
 fi
 
-if [ ! -f $3  ] 
+if [ ! -f $3  ]
 then
 	echo "Public Key file ${3} does not exist. please generate it"
-	echo "ssh-keygen -t rsa -b 2048" 
-	exit	
+	echo "ssh-keygen -t rsa -b 2048"
+	exit
 fi
 
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
-
+# ScriptCommandParameters
 SUBSCRIPTION=$1
 ADMIN_ADDRESS_PREFIX=$2
 PUBLICKEYFILE=$3
@@ -112,13 +140,11 @@ PUBLICKEYFILE=$3
 
 # The APP_NAME variable must not exceed 4 characters in size.
 # If it does the 15 character size limitation of the VM name may be exceeded.
-
-APP_NAME=app108
+# ScriptVars
+APP_NAME=app1
 LOCATION=centralus
 ENVIRONMENT=dev
 USERNAME=testuser
-#  we could get user name from command read -p "Enter User Name " USERNAME
-
 NUM_VM_INSTANCES_WEB_TIER=3
 NUM_VM_INSTANCES_BIZ_TIER=3
 NUM_VM_INSTANCES_DB_TIER=2
@@ -159,12 +185,13 @@ VM_SIZE=Standard_DS1
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
 VNET_NAME="${APP_NAME}-vnet"
 PUBLIC_IP_NAME="${APP_NAME}-pip"
-DIAGNOSTICS_STORAGE="${APP_NAME//-}diag" 
+DIAGNOSTICS_STORAGE="${APP_NAME//-}diag"
 JUMPBOX_PUBLIC_IP_NAME="${APP_NAME}-jumpbox-pip"
 JUMPBOX_NIC_NAME="${APP_NAME}-manage-vm1-nic1"
 
 #Set up the postfix variables attached to most CLI commands
-POSTFIX="--resource-group ${RESOURCE_GROUP} --subscription ${SUBSCRIPTION}" 
+POSTFIX="--resource-group ${RESOURCE_GROUP} --subscription ${SUBSCRIPTION}"
+#cp myfile myfile.bak
 
 azure config mode arm
 
@@ -275,7 +302,7 @@ azure availset create --name $AVAILSET_NAME --location $LOCATION $POSTFIX
 
 for ((i=1; i<=$NUM_VM_INSTANCES_DB_TIER ; i++))
   do
-    CreateVm $i db $SUBNET_NAME $USING_AVAILSET 
+    CreateVm $i db $SUBNET_NAME $USING_AVAILSET
   done
 
 
@@ -295,7 +322,7 @@ azure network vnet subnet create --vnet-name $VNET_NAME --address-prefix \
 
 for ((i=1; i<=$NUM_VM_INSTANCES_MANAGE_TIER ; i++))
   do
-    CreateVm $i manage $SUBNET_NAME $USING_AVAILSET 
+    CreateVm $i manage $SUBNET_NAME $USING_AVAILSET
   done
 
 
@@ -352,4 +379,3 @@ azure network nsg rule create --nsg-name $DB_TIER_NSG_NAME --name vnet-deny \
 # Associate the NSG rule with the subnet
 azure network vnet subnet set --vnet-name $VNET_NAME --name "${APP_NAME}-db-subnet" \
 --network-security-group-name $DB_TIER_NSG_NAME $POSTFIX
-
