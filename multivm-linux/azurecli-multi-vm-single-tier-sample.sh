@@ -1,72 +1,113 @@
 #!/bin/bash
 
-#####################################################################################################
-# define functions
+############################################################################
+#script for generating infrastructure for 1 tier multi linux VMS of        #
+# user choice. It creates azure resource group, storage accounts for VMS   #
+# vnet, subnets for tiers, load balance and NSG rules                      #
+# tags for main variables used                                             #
+# ScriptCommandParameters                                                  #
+# ScriptVars                                                               #
+############################################################################
+
+############################################################################
+# User defined functions for 3tier script                                  #
+# errhandle : handles errors via trap if any exception happens             # 
+# in the cli execution or if the user interrupts with CTRL+C               #
+# allowing for fast interruption                                           #
+# CreateVM: provisions the VMS for one tier. Parameters: VM Name,Tier name #
+# (web, biz, db, manage) avalability set(true or false) Load balancer name #
+############################################################################
+
+# error handling or interruption via ctrl-c.
+# line number and error code of executed command is passed to errhandle function
+
+trap 'errhandle $LINENO $?' SIGINT ERR
+
+errhandle()
+{ 
+  echo "Error or Interruption at line ${1} exit code ${2} "
+  exit ${2}
+}
+
 create_vm()
 {
   
+  echo "Creating VM ${1}"
+
+  VM_NAME="${APP_NAME}-vm${1}"
+  NIC_NAME="${VM_NAME}-nic1"
+  VHD_STORAGE="${VM_NAME//-}st1"
+  SSH_PORT=$((50000 + $1))
  
-  VM_NAME=$1
-  NIC_NAME=$2
-  VHD_STORAGE=$3
-  SSH_PORT=$4
-  NAT_RULE=$5
-  #Create NIC for VM1 
+  #Create NIC for VM1
+  
   azure network nic create --name $NIC_NAME --subnet-name $SUBNET_NAME \
   --subnet-vnet-name $VNET_NAME --location $LOCATION $POSTFIX
-
   #Add NIC to back-end address pool
+  
   azure network nic address-pool add --name $NIC_NAME \
   --lb-name $LB_NAME --lb-address-pool-name $LB_BACKEND_NAME $POSTFIX
-
+  
   #Create NAT rule for RDP
-  azure network lb inbound-nat-rule create --name $NAT_RULE \
+  azure network lb inbound-nat-rule create --name "ssh-vm${1}" \
   --frontend-port $SSH_PORT --backend-port 22 --lb-name $LB_NAME \
   --frontend-ip-name $LB_FRONTEND_NAME $POSTFIX
-
+  
   #Add NAT rule to the NIC
-  azure network nic inbound-nat-rule add --name $NIC_NAME --lb-name $LB_NAME --lb-inbound-nat-rule-name $NAT_RULE $POSTFIX
-
+  azure network nic inbound-nat-rule add --name $NIC_NAME --lb-name \
+  $LB_NAME --lb-inbound-nat-rule-name "ssh-vm${1}" $POSTFIX
+  
   #Create the storage account for the OS VHD
-  azure storage account create --type PLRS --location $LOCATION $VHD_STORAGE $POSTFIX
-
-  #Create the VM                                                                                                                                                                                                                                                                                                                                                                                
+  azure storage account create --type PLRS --location $LOCATION \
+  $VHD_STORAGE $POSTFIX
+  
+  #Create the VM
   azure vm create --name $VM_NAME --os-type Linux \
   --image-urn $LINUX_BASE_IMAGE --vm-size $VM_SIZE \
   --vnet-subnet-name $SUBNET_NAME --nic-name $NIC_NAME \
   --vnet-name $VNET_NAME --storage-account-name $VHD_STORAGE \
   --os-disk-vhd "${VM_NAME}-osdisk.vhd" --admin-username $USERNAME \
-  --ssh-publickey-file $PUBLICKEYFILE --boot-diagnostics-storage-uri "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
+  --ssh-publickey-file $PUBLICKEYFILE --boot-diagnostics-storage-uri \
+  "https://${DIAGNOSTICS_STORAGE}.blob.core.windows.net/" \
   --availset-name $AVAILSET_NAME --location $LOCATION $POSTFIX
-
+  
   #Attach a data disk
   azure vm disk attach-new --vm-name $VM_NAME --size-in-gb 128 \
   --vhd-name "${VM_NAME}-data1.vhd" --storage-account-name $VHD_STORAGE $POSTFIX
-  
+
 }
 
-if [ -z  $1  ]
+###############################################################################
+############################## End of user defined functions ##################
+###############################################################################
+
+if [ $# -ne 2  ]
 then
-	echo  "Usage: " $0 " subscription-id"
+	echo  "Usage:  ${0}  subscription-id public-ssh-key-file"
 	exit
 fi
 
-LOCATION=eastus2
-APP_NAME=app2
-ENVIRONMENT=dev
+if [ ! -f $2  ]
+then
+	echo "Public Key file ${2} does not exist. please generate it"
+	echo "ssh-keygen -t rsa -b 2048"
+	exit
+fi
 
-read -p "Enter username "  USERNAME
-read -p "Enter public Key file " PUBLICKEYFILE
-
-NUM_VM_INSTANCES=2
 
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
+# ScriptCommandParameters
 SUBSCRIPTION=$1
+PUBLICKEYFILE=$2
 
+# ScriptVars  
+LOCATION=eastus2
+APP_NAME=app90
+ENVIRONMENT=dev
+USERNAME=testuser
+NUM_VM_INSTANCES=2
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
-
-
 AVAILSET_NAME="${APP_NAME}-as"
 LB_NAME="${APP_NAME}-lb"
 LB_FRONTEND_NAME="${LB_NAME}-frontend"
@@ -144,11 +185,9 @@ azure network lb rule create --name "${LB_NAME}-rule-http" \
 
 
 # all machines are passed for the parameters for metrics collection
-for ((i=0; i<$NUM_VM_INSTANCES ; i++))
+for ((i=1; i<=$NUM_VM_INSTANCES ; i++))
 do 
-   VM_NAME="${APP_NAME}-vm${i}"
-   #params VM_NAME NIC_NAME VHD_STORAGE SSH_PORT NAT_RULE
-   create_vm  $VM_NAME "${VM_NAME}-0nic" "${VM_NAME//-}st0" $((5001+i)) "ssh-vm${i}" 
+  create_vm $i 
 done
 
 

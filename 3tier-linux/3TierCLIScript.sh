@@ -10,7 +10,7 @@
 
 ############################################################################
 # User defined functions for 3tier script                                  #
-# errhandle : handles errors via trap command if any exception happens     # 
+# errhandle : handles errors via trap if any exception happens             # 
 # in the cli execution or if the user interrupts with CTRL+C               #
 # allowing for fast interruption                                           #
 # CreateVM: provisions the VMS for the tiers. Parameters: VM Name,Tier name#
@@ -25,7 +25,7 @@ trap 'errhandle $LINENO $?' SIGINT ERR
 
 errhandle()
 { 
-  echo "Error or Iterruption at line ${1} exit code ${2} "
+  echo "Error or Interruption at line ${1} exit code ${2} "
   exit ${2}
 }
 

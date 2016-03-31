@@ -1,35 +1,71 @@
 #!/bin/bash
 
+############################################################################
+#script for generating infrastructure for single VM running linux          #
+# of user choice. It creates azure resource group, storage account for VM  #
+# vnet, subnets for VM, and NSG rule                                       #
+# tags for main variables used                                             #
+# ScriptCommandParameters                                                  #
+# ScriptVars                                                               #
+############################################################################
 
-if [ -z  $1  ]
+############################################################################
+# User defined functions for single VM script                              #
+# errhandle : handles errors via trap if any exception happens             # 
+# in the cli execution or if the user interrupts with CTRL+C               #
+# allowing for fast interruption                                           #
+############################################################################
+
+# error handling or interruption via ctrl-c.
+# line number and error code of executed command is passed to errhandle function
+
+trap 'errhandle $LINENO $?' SIGINT ERR
+
+errhandle()
+{ 
+  echo "Error or Interruption at line ${1} exit code ${2} "
+  exit ${2}
+}
+
+###############################################################################
+############################## End of user defined functions ##################
+###############################################################################
+
+# 2 paramaters are expected
+# public key file needs to be generates ssh-keygen
+
+if [ $# -ne 2  ]
 then
-	echo  "Usage: " $0 " subscription-id"
+	echo  "Usage:  ${0}  subscription-id public-ssh-key-file"
 	exit
 fi
 
+if [ ! -f $2  ]
+then
+	echo "Public Key file ${2} does not exist. please generate it"
+	echo "ssh-keygen -t rsa -b 2048"
+	exit
+fi
 
-LOCATION=eastus2
-APP_NAME=app101
-ENVIRONMENT=dev
-
-read -p "Enter username "  USERNAME
-read -p "Enter public Key file " PUBLICKEYFILE
- 
 # Explicitly set the subscription to avoid confusion as to which subscription
 # is active/default
+# ScriptCommandParameters
 SUBSCRIPTION=$1
+PUBLICKEYFILE=$2
 
-VM_NAME="${APP_NAME}-vm0"
-#echo $VM_NAME
-
+# ScriptVars 
+LOCATION=eastus2
+APP_NAME=app200
+ENVIRONMENT=dev
+USERNAME=testuser
+VM_NAME="${APP_NAME}-vm1"
 RESOURCE_GROUP="${APP_NAME}-${ENVIRONMENT}-rg"
-VM_NAME="${APP_NAME}-vm0"
 IP_NAME="${APP_NAME}-pip"
-NIC_NAME="${VM_NAME}-0nic"
+NIC_NAME="${VM_NAME}-1nic"
 NSG_NAME="${APP_NAME}-nsg"
 SUBNET_NAME="${APP_NAME}-subnet"
 VNET_NAME="${APP_NAME}-vnet"
-VHD_STORAGE="${VM_NAME//-}st0"
+VHD_STORAGE="${VM_NAME//-}st1"
 DIAGNOSTICS_STORAGE="${VM_NAME//-}diag"
 
 # For UBUNTU,OPENSUSE,RHEL use the following command to get the list of URNs:
