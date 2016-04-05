@@ -1,0 +1,4 @@
+C:\Dev12\Projects\Workbench\Blueprints\MultiDc\MovieService\MovieService.Core\bin\Debug\MovieService.Core.dll
+C:\Dev12\Projects\Workbench\Blueprints\MultiDc\MovieService\MovieService.Core\bin\Debug\MovieService.Core.pdb
+C:\Dev12\Projects\Workbench\Blueprints\MultiDc\MovieService\MovieService.Core\obj\Debug\MovieService.Core.dll
+C:\Dev12\Projects\Workbench\Blueprints\MultiDc\MovieService\MovieService.Core\obj\Debug\MovieService.Core.pdb

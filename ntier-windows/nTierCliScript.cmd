@@ -10,7 +10,7 @@ SET parent=%~dp0
 	
 :: The APP_NAME variable must not exceed 4 characters in size.
 :: If it does the 15 character size limitation of the VM name may be exceeded.
-SET APP_NAME=app1
+SET APP_NAME=ru
 SET LOCATION=centralus
 SET ENVIRONMENT=dev
 SET USERNAME=testuser
@@ -103,8 +103,8 @@ CALL azure config mode arm
 						
 :: TODO - Since route is still under investigation let's create resource group and vnet
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: CALL azure group create --name %RESOURCE_GROUP% %LOCATION%
-:: CALL azure network vnet create --name %VNET_NAME% --address-prefixes %VNET_IP_RANGE% --location %LOCATION% %POSTFIX%
+CALL azure group create --name %RESOURCE_GROUP% %LOCATION%
+CALL azure network vnet create --name %VNET_NAME% --address-prefixes %VNET_IP_RANGE% --location %LOCATION% %POSTFIX%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -114,7 +114,7 @@ CALL azure config mode arm
 CALL azure storage account create --type LRS --location %LOCATION% %POSTFIX% %DIAGNOSTICS_STORAGE%
 
 :: Create the public IP address (dynamic)`
-CALL azure network public-ip create --name %PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
+:: CALL azure network public-ip create --name %PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the jumpbox public IP address (dynamic)
 CALL azure network public-ip create --name %JUMPBOX_PUBLIC_IP_NAME% --location %LOCATION% %POSTFIX%
@@ -138,7 +138,7 @@ CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
   %MANAGE_SUBNET_IP_RANGE% --name %SUBNET_NAME% %POSTFIX%
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_MANAGE_TIER%) DO CALL :CreateVM %%I manage %SUBNET_NAME% %USING_AVAILSET%
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_MANAGE_TIER%) DO CALL :CreateVM %%I mgt %SUBNET_NAME% %USING_AVAILSET%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -167,17 +167,17 @@ CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
 CALL azure availset create --name %AVAILSET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create a public IP address
-:: CALL azure network public-ip create --name %LB_PUBLIC_IP_NAME% --domain-name-label ^
-::	%LB_DOMAIN_NAME% --allocation-method static --idle-timeout 4 --location %LOCATION% %POSTFIX%
+CALL azure network public-ip create --name %PUBLIC_IP_NAME% --domain-name-label ^
+  %LB_DOMAIN_NAME% --idle-timeout 4 --location %LOCATION% %POSTFIX%
 
 :: Create the load balancer frontend-ip using a public IP address and subnet
 CALL azure network lb frontend-ip create --name %LB_NAME%-frontend --lb-name ^
-  %LB_NAME% --public-ip-name %PUBLIC_IP_NAME%
+  %LB_NAME% --public-ip-name %PUBLIC_IP_NAME% --subnet-name %SUBNET_FRONTEND_NAME% %POSTFIX%
 
 CALL :CreateCommonLBResources %LB_NAME%
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_DMZ_TIER%) DO CALL :CreateVM %%I dmz %SUBNET_FRONTEND_NAME% %SUBNET_BACKEND_NAME% %USING_AVAILSET% %LB_NAME%
+FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_DMZ_TIER%) DO CALL :CreateNaVM %%I dmz %SUBNET_FRONTEND_NAME% %SUBNET_BACKEND_NAME% %USING_AVAILSET% %LB_NAME%
 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -206,17 +206,17 @@ CALL azure network nic set --name %JUMPBOX_NIC_NAME% --public-ip-name %JUMPBOX_P
 
 									
 :: Create a route table for the backend tier
-CALL azure network route-table create --name data-tier-udr %POSTFIX%
+REM CALL azure network route-table create --name data-tier-udr %POSTFIX%
 
-:: Create a rule to send all traffic destined to the service tier A to load balancer
-CALL azure network route-table route set --route-table-name data-tier-udr --name BackendRoute ^
-										--address-prefix %SERVICE_SUBNET_IP_RANGE_1% ^
-										--next-hop-type VirtualAppliance ^
-										--next-hop-ip-address %PUBLIC_IP_NAME%	%POSTFIX%	
+REM :: Create a rule to send all traffic destined to the service tier A to load balancer
+REM CALL azure network route-table route set --route-table-name data-tier-udr --name BackendRoute ^
+										REM --address-prefix %SERVICE_SUBNET_IP_RANGE_1% ^
+										REM --next-hop-type VirtualAppliance ^
+										REM --next-hop-ip-address %LB_DOMAIN_NAME%	%POSTFIX%	
 
-:: Associate the route table created in the previous step with data tier subnet
-CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %DATATIER_SUBNET_NAME% ^
-									--route-table-name data-tier-udr	
+REM :: Associate the route table created in the previous step with data tier subnet
+REM CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %DATATIER_SUBNET_NAME% ^
+									REM --route-table-name data-tier-udr	
 
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -232,13 +232,13 @@ SET USING_AVAILSET=true
 
 :: Set a temporary variable to service tier subnet IP range number and use the actual
 :: value to setup SUBNET_IP_RANGE
-SET TEMP_SUBNET_VAR=SERVICE_SUBNET_IP_RANGE_%1%
-for /f "delims=" %%i in ('call echo %%TEMP_SUBNET_VAR%%') do set @SUBNET_IP_RANGE=%%i
+SET SUBNET_IP_RANGE=SERVICE_SUBNET_IP_RANGE_%1
+REM for /f "delims=" %%J in ('call echo %%TEMP_SUBNET_VAR%%') do set @SUBNET_IP_RANGE=%%J
 
 :: Set a temporary variable to service tier ILB IP number and use the actual
 :: value to setup ILB IP
-SET TEMP_ILB_VAR=SERVICE_ILB_IP_%1%
-for /f "delims=" %%i in ('call echo %%TEMP_ILB_VAR%%') do set @SERVICE_ILB_IP=%%i
+SET SERVICE_ILB_IP=SERVICE_ILB_IP_%1
+REM for /f "delims=" %%K in ('call echo %%TEMP_ILB_VAR%%') do set @SERVICE_ILB_IP=%%K
 
 ECHO Creating resources for service tier: %2
 
@@ -247,38 +247,40 @@ CALL azure network lb create --name %LB_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create the subnet
 CALL azure network vnet subnet create --vnet-name %VNET_NAME% --address-prefix ^
-  %SUBNET_IP_RANGE% --name %SUBNET_NAME% %POSTFIX%
+  !%SUBNET_IP_RANGE%! --name %SUBNET_NAME% %POSTFIX%
 
 :: Create the availability sets
 CALL azure availset create --name %AVAILSET_NAME% --location %LOCATION% %POSTFIX%
 
+ECHO Service ILB IP is: !%SERVICE_ILB_IP%!
+
 :: Create the load balancer frontend-ip using a private IP address and subnet
 CALL azure network lb frontend-ip create --name %LB_NAME%-frontend --lb-name ^
-  %LB_NAME% --private-ip-address %SERVICE_ILB_IP% --subnet-name %SUBNET_NAME% ^
+  %LB_NAME% --private-ip-address !%SERVICE_ILB_IP%! --subnet-name %SUBNET_NAME% ^
   --subnet-vnet-name %VNET_NAME% %POSTFIX%
 
 :: Create a route table for the service tier
-CALL azure network route-table create --name frontend-route-table --location %LOCATION% %POSTFIX%
+REM CALL azure network route-table create --name frontend-route-table --location %LOCATION% %POSTFIX%
 
-:: Create a rule to send all traffic destined to the data tier to load balancer
-CALL azure network route-table route set --route-table-name frontend-route-table --name FrontendRoute ^
-										--address-prefix %DB_SUBNET_IP_RANGE% ^
-										--next-hop-type VirtualAppliance ^
-										--next-hop-ip-address %PUBLIC_IP_NAME% %POSTFIX%									
+REM :: Create a rule to send all traffic destined to the data tier to load balancer
+REM CALL azure network route-table route set --route-table-name frontend-route-table --name FrontendRoute ^
+										REM --address-prefix %DB_SUBNET_IP_RANGE% ^
+										REM --next-hop-type VirtualAppliance ^
+										REM --next-hop-ip-address %LB_DOMAIN_NAME% %POSTFIX%									
 
-:: Associate the route table created in the previous step with service tier subnet
-CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %SUBNET_NAME% ^
-									--route-table-name svc1-tier-udr %POSTFIX%  
+REM :: Associate the route table created in the previous step with service tier subnet
+REM CALL azure network vnet subnet set --vnet-name %VNET_NAME% --name %SUBNET_NAME% ^
+									REM --route-table-name svc1-tier-udr %POSTFIX%  
   
 CALL :CreateCommonLBResources %LB_NAME%
 
 :: Set a temporary variable to number of VMs in service tier and use the actual
 :: value to call VM creation subroutine
-SET TEMP_VM_VAR=NUM_VM_INSTANCES_SERVICE_TIER_%1%
-for /f "delims=" %%i in ('call echo %%TEMP_VM_VAR%%') do set @NUM_VM_INSTANCES_SERVICE_TIER=%%i
+SET NUM_VM_INSTANCES_SERVICE_TIER=NUM_VM_INSTANCES_SERVICE_TIER_%1
+REM for /f "delims=" %%J in ('call echo %%TEMP_VM_VAR%%') do set @NUM_VM_INSTANCES_SERVICE_TIER=%%J
 
 :: Create VMs and per-VM resources
-FOR /L %%I IN (1,1,%NUM_VM_INSTANCES_SERVICE_TIER%) DO CALL :CreateVM %%I %2 %SUBNET_NAME% %USING_AVAILSET% %LB_NAME%
+FOR /L %%I IN (1,1,!%NUM_VM_INSTANCES_SERVICE_TIER%!) DO CALL :CreateVM %%I %2 %SUBNET_NAME% %USING_AVAILSET% %LB_NAME%
 
 GOTO :eof
 
@@ -375,8 +377,8 @@ goto :eof
 :CreateNaVm
 
 SET TIER_NAME=%2
-SET FRONTEND_SUBNET_NAME=%3
-SET BACKEND_SUBNET_NAME=%4
+SET SUBNET_FRONTEND_NAME=%3
+SET SUBNET_BACKEND_NAME=%4
 SET NEEDS_AVAILABILITY_SET=%5
 SET LB_NAME=%6
 
@@ -395,11 +397,11 @@ SET LB_FRONTEND_NAME=%LB_NAME%-frontend
 SET LB_BACKEND_NAME=%LB_NAME%-backend-pool
 
 :: Create first NIC for VM1
-CALL azure network nic create --name %NIC_NAME_1% --subnet-name %FRONTEND_SUBNET_NAME% ^
+CALL azure network nic create --name %NIC_NAME_1% --subnet-name %SUBNET_FRONTEND_NAME% ^
   --subnet-vnet-name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 :: Create second NIC for VM1
-CALL azure network nic create --name %NIC_NAME_2% --subnet-name %BACKEND_SUBNET_NAME% ^
+CALL azure network nic create --name %NIC_NAME_2% --subnet-name %SUBNET_FRONTEND_NAME% ^
   --subnet-vnet-name %VNET_NAME% --location %LOCATION% %POSTFIX%
 
 IF NOT "%LB_NAME%"=="" (
